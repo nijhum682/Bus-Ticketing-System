@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Database Systems Project: Smart Bus Ticketing and Reservation System. High-fidelity glassmorphic portal featuring real-time transit scheduler, fleet categorization, and user authentication modules.">
+  <title>Smart Bus Ticketing & Reservation System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="landing-wrapper">
+    
+    <!-- Main Landing Card Component -->
+    <main class="landing-main">
+      <section class="card landing-card">
+        
+        <div class="logo-container">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1"></path>
+              <circle cx="7.5" cy="17.5" r="2.5"></circle>
+              <circle cx="16.5" cy="17.5" r="2.5"></circle>
+            </svg>
+          </div>
+          <div class="logo-text">
+            SmartTransit
+            <span>Bus Database v1.0</span>
+          </div>
+        </div>
+        
+        <h1 class="landing-title">Smart Bus Reservation & Ticketing Portal</h1>
+        
+        <p class="landing-intro">
+          Welcome to the future of transit booking and fleet management. Seamlessly schedule routes, reserve premium sleeper cabins, audit passenger registries, and access secure ticket-auditing portals in one fast, integrated database database ecosystem.
+        </p>
+
+        <!-- Dynamic Fleet Categories Selector -->
+        <div class="fleet-section">
+          <h3 class="fleet-heading">Explore Our Premium Fleet</h3>
+          
+          <div class="fleet-grid">
+            
+            <!-- Bus Category 1 -->
+            <button class="bus-card" id="busCardCity" data-tier="City Shuttle">
+              <div class="bus-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
+                  <line x1="6" y1="6" x2="6" y2="13"></line>
+                  <rect x="8" y="8" width="3" height="4" rx="0.5"></rect>
+                  <rect x="13" y="8" width="3" height="4" rx="0.5"></rect>
+                  <rect x="18" y="8" width="3" height="4" rx="0.5"></rect>
+                  <circle cx="7" cy="17" r="2"></circle>
+                  <circle cx="17" cy="17" r="2"></circle>
+                  <line x1="2" y1="14" x2="22" y2="14"></line>
+                </svg>
+              </div>
+              <div class="bus-card-details">
+                <span class="bus-card-title">City Shuttle</span>
+                <span class="bus-card-tag">Economy Class</span>
+              </div>
+            </button>
+
+            <!-- Bus Category 2 -->
+            <button class="bus-card" id="busCardExpress" data-tier="Premium Coach">
+              <div class="bus-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1"></path>
+                  <circle cx="7.5" cy="17.5" r="2.5"></circle>
+                  <circle cx="16.5" cy="17.5" r="2.5"></circle>
+                  <line x1="6" y1="10" x2="12" y2="10"></line>
+                </svg>
+              </div>
+              <div class="bus-card-details">
+                <span class="bus-card-title">Premium Coach</span>
+                <span class="bus-card-tag">AC Executive</span>
+              </div>
+            </button>
+
+            <!-- Bus Category 3 -->
+            <button class="bus-card" id="busCardSleeper" data-tier="Luxury Sleeper">
+              <div class="bus-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Outer Bus Frame -->
+                  <rect x="2" y="5" width="20" height="11" rx="2"></rect>
+                  <!-- Bed structure inside the coach -->
+                  <path d="M5 8v5"></path>
+                  <path d="M5 10h10a1 1 0 0 1 1 1v2"></path>
+                  <circle cx="8" cy="9" r="1"></circle>
+                  <!-- Wheels aligned to bottom border -->
+                  <circle cx="6.5" cy="18.5" r="2.5"></circle>
+                  <circle cx="17.5" cy="18.5" r="2.5"></circle>
+                </svg>
+              </div>
+              <div class="bus-card-details">
+                <span class="bus-card-title">Luxury Sleeper</span>
+                <span class="bus-card-tag">Night Express</span>
+              </div>
+            </button>
+
+            <!-- Bus Category 4 -->
+            <button class="bus-card" id="busCardCruiser" data-tier="Super Cruiser">
+              <div class="bus-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Tall outer frame (bus shape) -->
+                  <rect x="4" y="3" width="16" height="17" rx="3"></rect>
+                  <!-- Upper Windshield -->
+                  <rect x="6" y="5" width="12" height="4" rx="1"></rect>
+                  <!-- Lower Windshield -->
+                  <rect x="6" y="11" width="12" height="4" rx="1"></rect>
+                  <!-- Grille / Logo space -->
+                  <line x1="9" y1="17" x2="15" y2="17"></line>
+                  <!-- Headlights -->
+                  <circle cx="7" cy="17" r="1"></circle>
+                  <circle cx="17" cy="17" r="1"></circle>
+                  <!-- Side Mirrors -->
+                  <path d="M4 8H3v3h1"></path>
+                  <path d="M20 8h1v3h-1"></path>
+                  <!-- Bottom Wheels/Supports -->
+                  <path d="M6 20v2h2v-2"></path>
+                  <path d="M16 20v2h2v-2"></path>
+                </svg>
+              </div>
+              <div class="bus-card-details">
+                <span class="bus-card-title">Super Cruiser</span>
+                <span class="bus-card-tag">Double-Decker</span>
+              </div>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Call to Action Buttons for Authentication -->
+        <div class="landing-actions">
+          <button id="signInBtn" class="action-btn btn-primary">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"></path>
+            </svg>
+            Sign In
+          </button>
+          <button id="signUpBtn" class="action-btn btn-secondary">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="17" y1="11" x2="23" y2="11"></line>
+            </svg>
+            Sign Up
+          </button>
+        </div>
+
+      </section>
+    </main>
+
+  </div>
+
+  <!-- Toast Notification Wrapper -->
+  <div id="toast" class="toast" role="alert" aria-live="assertive">
+    <div class="toast-icon"></div>
+    <div id="toastMessage" class="toast-message">Portal Alert</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "index.html",
+      "name": "IIS Express",
+      "program": "C:\\Program Files\\IIS Express\\iisexpress.exe",
+      "args": [
+        "/config:\"${workspaceRoot}\\.vs\\Bus Ticketing System.slnx\\config\\applicationhost.config\"",
+        "/site:\"Bus Ticketing System\""
+      ]
+    }
+  ]
+}
