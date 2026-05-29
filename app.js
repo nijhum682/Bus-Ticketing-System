@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (signUpBtn) {
     signUpBtn.addEventListener('click', () => {
-      showToast('📝 Sign Up registration form is coming in the next development phase!', 'info');
+      window.location.href = 'signup.html';
     });
   }
 
