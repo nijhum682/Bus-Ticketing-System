@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Auth Button Handlers ---
   if (signInBtn) {
     signInBtn.addEventListener('click', () => {
-      showToast('🔑 Sign In portal is coming in the next development phase!', 'info');
+      window.location.href = 'signin.html';
     });
   }
 

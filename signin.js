@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   // --- DOM Elements ---
-  const signupForm = document.getElementById('signupForm');
+  const signinForm = document.getElementById('signinForm');
+  const usernameInput = document.getElementById('usernameInput');
   const passwordInput = document.getElementById('passwordInput');
   const passwordToggleBtn = document.getElementById('passwordToggleBtn');
   const eyeIcon = document.getElementById('eyeIcon');
-  const signInRedirectBtn = document.getElementById('signInRedirectBtn');
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
 
@@ -33,107 +33,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Redirect Handlers ---
-  if (signInRedirectBtn) {
-    signInRedirectBtn.addEventListener('click', () => {
-      showToast('🔑 Sign In portal is coming in the next development phase!', 'info');
-    });
-  }
-
   // --- Form Validation and Submission ---
-  if (signupForm) {
+  if (signinForm) {
+    const inputs = [usernameInput, passwordInput];
+    
     // Clear error highlights on input
-    const inputs = signupForm.querySelectorAll('.form-input');
     inputs.forEach(input => {
       input.addEventListener('input', () => {
         input.classList.remove('error-field');
       });
     });
 
-    signupForm.addEventListener('submit', (e) => {
+    signinForm.addEventListener('submit', (e) => {
       e.preventDefault();
 
       // Reset all error states
       inputs.forEach(input => input.classList.remove('error-field'));
 
       // Retrieve values
-      const name = document.getElementById('nameInput').value.trim();
-      const username = document.getElementById('usernameInput').value.trim();
-      const passwordInputEl = document.getElementById('passwordInput');
-      const password = passwordInputEl.value;
-      const emailInputEl = document.getElementById('emailInput');
-      const email = emailInputEl.value.trim();
-      const phoneInputEl = document.getElementById('phoneInput');
-      const phone = phoneInputEl.value.trim();
-      
-      const presArea = document.getElementById('presAreaInput').value.trim();
-      const presUpazilla = document.getElementById('presUpazillaInput').value.trim();
-      const presDistrict = document.getElementById('presDistrictInput').value.trim();
-      const presDivision = document.getElementById('presDivisionInput').value.trim();
-      
-      const permArea = document.getElementById('permAreaInput').value.trim();
-      const permUpazilla = document.getElementById('permUpazillaInput').value.trim();
-      const permDistrict = document.getElementById('permDistrictInput').value.trim();
-      const permDivision = document.getElementById('permDivisionInput').value.trim();
-      
-      const genderChecked = signupForm.querySelector('input[name="gender"]:checked');
-      const professionInputEl = document.getElementById('professionInput');
-      const profession = professionInputEl.value.trim();
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
 
-      // Basic empty field verification
-      let hasEmpty = false;
-      inputs.forEach(input => {
-        if (!input.value.trim() && input.type !== 'radio') {
-          input.classList.add('error-field');
-          hasEmpty = true;
-        }
-      });
-      
-      if (hasEmpty) {
-        showToast('⚠️ Please fill out all registry fields.', 'warning');
+      // Verification checks (Empty check)
+      if (!username || !password) {
+        if (!username) usernameInput.classList.add('error-field');
+        if (!password) passwordInput.classList.add('error-field');
+        showToast('⚠️ Please enter both your Username and Password.', 'warning');
         return;
       }
 
-      if (!genderChecked) {
-        showToast('⚠️ Please select your Gender.', 'warning');
-        return;
-      }
-
-      // Password Complexity Validation (At least 8 chars, 1 number, 1 special char, 1 uppercase, 1 lowercase)
-      const hasMinLength = password.length >= 8;
-      const hasNumber = /[0-9]/.test(password);
-      const hasSpecial = /[^A-Za-z0-9]/.test(password);
-      const hasUpper = /[A-Z]/.test(password);
-      const hasLower = /[a-z]/.test(password);
-
-      if (!hasMinLength || !hasNumber || !hasSpecial || !hasUpper || !hasLower) {
-        passwordInputEl.classList.add('error-field');
-        showToast('⚠️ Password must be at least 8 characters long, containing a number, a special character, a capital letter, and a small letter.', 'danger');
-        return;
-      }
-
-      // Email Format Check
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        emailInputEl.classList.add('error-field');
-        showToast('⚠️ Please enter a valid email address.', 'warning');
-        return;
-      }
-
-      // Phone Number Format Check
-      if (phone.length < 7 || isNaN(phone.replace(/[+\-\s()]/g, ''))) {
-        phoneInputEl.classList.add('error-field');
-        showToast('⚠️ Please enter a valid database contact phone number.', 'warning');
+      // Simulated credential matching (username: "admin", password: "Admin123!")
+      if (username !== 'admin' || password !== 'Admin123!') {
+        // Highlight ALL input fields as red on mismatch
+        usernameInput.classList.add('error-field');
+        passwordInput.classList.add('error-field');
+        showToast('❌ Invalid Username or Password.', 'danger');
         return;
       }
 
       // Success Scenario
-      showToast(`🎉 Registration successful! Welcome to SmartTransit database system, ${name}!`, 'success');
+      showToast(`🎉 Sign In successful! Welcome back, ${username}!`, 'success');
       
       // Reset form
-      signupForm.reset();
+      signinForm.reset();
 
-      // Redirect back to Landing/Home page after toast notification display
+      // Redirect to Home page after short delay
       setTimeout(() => {
         window.location.href = 'index.html';
       }, 2500);
@@ -179,5 +123,4 @@ document.addEventListener('DOMContentLoaded', () => {
       toast.classList.remove('show');
     }, 4000);
   }
-
 });

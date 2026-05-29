@@ -70,29 +70,74 @@
             <input type="email" id="emailInput" name="email" class="form-input" placeholder="Your email" autocomplete="email" required>
           </div>
 
-          <!-- Field 5: Your Roll -->
-          <div class="form-group">
-            <input type="text" id="rollInput" name="roll" class="form-input" placeholder="Your Roll" required>
-          </div>
-
-          <!-- Field 6: Batch -->
-          <div class="form-group">
-            <input type="text" id="batchInput" name="batch" class="form-input" placeholder="Batch" required>
-          </div>
-
-          <!-- Field 7: Department -->
-          <div class="form-group">
-            <input type="text" id="deptInput" name="department" class="form-input" placeholder="Department" required>
-          </div>
-
-          <!-- Field 8: University -->
-          <div class="form-group">
-            <input type="text" id="uniInput" name="university" class="form-input" placeholder="University" required>
-          </div>
-
-          <!-- Field 9: Phone Number -->
+          <!-- Field 5: Phone Number -->
           <div class="form-group">
             <input type="tel" id="phoneInput" name="phone" class="form-input" placeholder="Phone Number" autocomplete="tel" required>
+          </div>
+
+          <!-- Field 6: Present Address -->
+          <div class="form-address-group">
+            <div class="address-group-label">Present Address</div>
+            <div class="address-grid">
+              <div class="form-group">
+                <input type="text" id="presAreaInput" name="presArea" class="form-input" placeholder="Area/Road" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="presUpazillaInput" name="presUpazilla" class="form-input" placeholder="Upazilla" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="presDistrictInput" name="presDistrict" class="form-input" placeholder="District" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="presDivisionInput" name="presDivision" class="form-input" placeholder="Division" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Field 7: Permanent Address -->
+          <div class="form-address-group">
+            <div class="address-group-label">Permanent Address</div>
+            <div class="address-grid">
+              <div class="form-group">
+                <input type="text" id="permAreaInput" name="permArea" class="form-input" placeholder="Area/Road" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="permUpazillaInput" name="permUpazilla" class="form-input" placeholder="Upazilla" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="permDistrictInput" name="permDistrict" class="form-input" placeholder="District" required>
+              </div>
+              <div class="form-group">
+                <input type="text" id="permDivisionInput" name="permDivision" class="form-input" placeholder="Division" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Field 8: Gender -->
+          <div class="form-gender-group">
+            <div class="gender-group-label">Gender</div>
+            <div class="gender-radio-options">
+              <label class="gender-radio-label">
+                <input type="radio" name="gender" value="Male" class="gender-radio-input" required>
+                <span class="gender-radio-custom"></span>
+                Male
+              </label>
+              <label class="gender-radio-label">
+                <input type="radio" name="gender" value="Female" class="gender-radio-input">
+                <span class="gender-radio-custom"></span>
+                Female
+              </label>
+              <label class="gender-radio-label">
+                <input type="radio" name="gender" value="Others" class="gender-radio-input">
+                <span class="gender-radio-custom"></span>
+                Others
+              </label>
+            </div>
+          </div>
+
+          <!-- Field 9: Profession -->
+          <div class="form-group">
+            <input type="text" id="professionInput" name="profession" class="form-input" placeholder="Profession" required>
           </div>
 
           <!-- Action Buttons -->
@@ -129,6 +174,6 @@
     <div id="toastMessage" class="toast-message">Portal Alert</div>
   </div>
 
-  <script src="signup.js"></script>
+  <script src="signup.js?v=2"></script>
 </body>
 </html>
