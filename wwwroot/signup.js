@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Redirect Handlers ---
   if (signInRedirectBtn) {
     signInRedirectBtn.addEventListener('click', () => {
-      showToast('🔑 Sign In portal is coming in the next development phase!', 'info');
+      window.location.href = 'signin.html';
     });
   }
 
@@ -130,12 +130,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Success Scenario - Call Backend API
       const userData = {
         name: name,
+        username: username,
         email: email,
         password: password,
         phone: phone
       };
 
-      fetch('/api/auth/signup', {
+      const apiBase = (window.location.hostname === 'localhost' && window.location.port === '5000') 
+        ? '' 
+        : 'http://localhost:5000';
+
+      fetch(`${apiBase}/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

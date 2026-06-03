@@ -63,7 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // API Call for Sign In
-      fetch('/api/auth/signin', {
+      const apiBase = (window.location.hostname === 'localhost' && window.location.port === '5000') 
+        ? '' 
+        : 'http://localhost:5000';
+
+      fetch(`${apiBase}/api/auth/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -80,8 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(data => {
         showToast(data.message, 'success');
         signinForm.reset();
+        localStorage.setItem('userEmail', data.user.email);
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.href = 'dashboard.html';
         }, 2500);
       })
       .catch(error => {

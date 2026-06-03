@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Database Systems Project: Smart Bus Ticketing and Reservation System. User Profile and Registration Dashboard.">
+  <title>SmartTransit - User Profile Dashboard</title>
+  <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+
+  <div class="signup-wrapper">
+    
+    <!-- Main Dashboard Card -->
+    <main class="signup-main">
+      <section class="card signup-card">
+        
+        <!-- Header / Logo -->
+        <div class="logo-container" style="justify-content: center;">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1"></path>
+              <circle cx="7.5" cy="17.5" r="2.5"></circle>
+              <circle cx="16.5" cy="17.5" r="2.5"></circle>
+            </svg>
+          </div>
+          <div class="logo-text">
+            SmartTransit
+            <span>Bus Database v1.0</span>
+          </div>
+        </div>
+
+        <h1 class="signup-title">
+          <svg class="header-icon" viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          User Dashboard
+        </h1>
+
+        <!-- Profile Details Display Section -->
+        <div class="form-address-group" style="margin-bottom: 2rem;">
+          <div class="address-group-label" style="margin-bottom: 1.25rem; font-size: 1.05rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; color: var(--accent-secondary);">
+            Database Registry Profile
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            
+            <!-- Full Name -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+              <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Full Name</span>
+              <span id="nameDisplay" style="color: var(--text-primary); font-weight: 600; font-size: 1rem;">Loading...</span>
+            </div>
+
+            <!-- Email -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+              <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Registered Email</span>
+              <span id="emailDisplay" style="color: var(--text-primary); font-weight: 600; font-size: 1rem;">Loading...</span>
+            </div>
+
+            <!-- Phone -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+              <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Contact Phone</span>
+              <span id="phoneDisplay" style="color: var(--text-primary); font-weight: 600; font-size: 1rem;">Loading...</span>
+            </div>
+
+            <!-- Registration Date -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.25rem;">
+              <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Registration Date</span>
+              <span id="dateDisplay" style="color: var(--text-primary); font-weight: 600; font-size: 1rem;">Loading...</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Dashboard Actions -->
+        <div class="signup-actions">
+          <button id="logoutBtn" class="action-btn btn-primary">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Log Out
+          </button>
+        </div>
+
+      </section>
+    </main>
+
+  </div>
+
+  <!-- Toast Notification Wrapper -->
+  <div id="toast" class="toast" role="alert" aria-live="assertive">
+    <div class="toast-icon"></div>
+    <div id="toastMessage" class="toast-message">Portal Alert</div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

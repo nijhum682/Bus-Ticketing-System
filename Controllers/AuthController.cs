@@ -24,6 +24,11 @@ namespace BusTicketingBackend.Controllers
                 return BadRequest(new { message = "Email already registered." });
             }
 
+            if (await _context.Users.AnyAsync(u => u.Username == user.Username))
+            {
+                return BadRequest(new { message = "Username already taken." });
+            }
+
             // In a real application, you should hash the password!
             // For this project, we store it as is as per simplified requirement if not specified.
             _context.Users.Add(user);
@@ -35,7 +40,8 @@ namespace BusTicketingBackend.Controllers
         [HttpPost("signin")]
         public async Task<IActionResult> SignIn([FromBody] SignInModel model)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email && u.Password == model.Password);
+            var user = await _context.Users.FirstOrDefaultAsync(u => 
+                (u.Email == model.Email || u.Username == model.Email) && u.Password == model.Password);
 
             if (user == null)
             {
@@ -43,6 +49,29 @@ namespace BusTicketingBackend.Controllers
             }
 
             return Ok(new { message = $"Welcome back, {user.Name}!", user = new { user.Name, user.Email } });
+        }
+
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile([FromQuery] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest(new { message = "Email is required." });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == email);
+
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            return Ok(new {
+                user.Name,
+                user.Email,
+                user.Phone,
+                user.CreatedAt
+            });
         }
     }
 
