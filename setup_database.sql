@@ -1,0 +1,14 @@
+-- Bus Ticketing System Database Setup
+-- Run this in XAMPP phpMyAdmin or MySQL Terminal
+
+CREATE DATABASE IF NOT EXISTS bus_ticketing;
+USE bus_ticketing;
+
+CREATE TABLE IF NOT EXISTS Users (
+	Id INT AUTO_INCREMENT PRIMARY KEY,
+	Name VARCHAR(100) NOT NULL,
+	Email VARCHAR(100) NOT NULL UNIQUE,
+	Password VARCHAR(255) NOT NULL,
+	Phone VARCHAR(20),
+	CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);

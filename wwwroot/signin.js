@@ -62,25 +62,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Simulated credential matching (username: "admin", password: "Admin123!")
-      if (username !== 'admin' || password !== 'Admin123!') {
-        // Highlight ALL input fields as red on mismatch
-        usernameInput.classList.add('error-field');
-        passwordInput.classList.add('error-field');
-        showToast('❌ Invalid Username or Password.', 'danger');
-        return;
-      }
-
-      // Success Scenario
-      showToast(`🎉 Sign In successful! Welcome back, ${username}!`, 'success');
-      
-      // Reset form
-      signinForm.reset();
-
-      // Redirect to Home page after short delay
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 2500);
+      // API Call for Sign In
+      fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: username, password: password }) // Using 'username' variable for email input
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          return response.json().then(err => { throw new Error(err.message || 'Invalid credentials'); });
+        }
+      })
+      .then(data => {
+        showToast(data.message, 'success');
+        signinForm.reset();
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 2500);
+      })
+      .catch(error => {
+        showToast(`❌ ${error.message}`, 'danger');
+      });
     });
   }
 

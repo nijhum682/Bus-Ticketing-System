@@ -127,16 +127,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Success Scenario
-      showToast(`🎉 Registration successful! Welcome to SmartTransit database system, ${name}!`, 'success');
-      
-      // Reset form
-      signupForm.reset();
+      // Success Scenario - Call Backend API
+      const userData = {
+        name: name,
+        email: email,
+        password: password,
+        phone: phone
+      };
 
-      // Redirect back to Landing/Home page after toast notification display
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 2500);
+      fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          return response.json().then(err => { throw new Error(err.message || 'Registration failed'); });
+        }
+      })
+      .then(data => {
+        showToast(`🎉 Registration successful! Welcome, ${name}!`, 'success');
+        signupForm.reset();
+        setTimeout(() => {
+          window.location.href = 'signin.html';
+        }, 2500);
+      })
+      .catch(error => {
+        showToast(`❌ Error: ${error.message}`, 'danger');
+      });
     });
   }
 
