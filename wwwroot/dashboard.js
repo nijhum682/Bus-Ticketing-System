@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- API Setup & Fetch Profile ---
-  const apiBase = (window.location.hostname === 'localhost' && window.location.port === '5000') 
-    ? '' 
-    : 'http://localhost:5000';
+  const apiBase = (window.location.protocol === 'file:') 
+    ? 'http://localhost:5080' 
+    : '';
 
   fetch(`${apiBase}/api/auth/profile?email=${encodeURIComponent(userEmail)}`)
     .then(response => {
