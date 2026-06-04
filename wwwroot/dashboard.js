@@ -17,15 +17,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Session Verification ---
   const userEmail = localStorage.getItem('userEmail');
+  const userRole = localStorage.getItem('userRole');
   if (!userEmail) {
     window.location.href = 'signin.html';
     return;
   }
+  if (userRole === 'Admin') {
+    window.location.href = 'admin_dashboard.html';
+    return;
+  }
 
   // --- API Setup & Fetch Profile ---
-  const apiBase = (window.location.protocol === 'file:') 
-    ? 'http://localhost:5080' 
-    : '';
+  const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
+    ? '' 
+    : 'http://localhost:5080';
 
   fetch(`${apiBase}/api/auth/profile?email=${encodeURIComponent(userEmail)}`)
     .then(response => {
@@ -60,10 +65,53 @@ document.addEventListener('DOMContentLoaded', () => {
       if (dateDisplay) dateDisplay.textContent = 'Error loading profile';
     });
 
+  // --- Fetch Notices from Database ---
+  const noticesContainer = document.getElementById('noticesContainer');
+  if (noticesContainer) {
+    fetch(`${apiBase}/api/notice`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Could not fetch notice data from database.');
+        }
+        return response.json();
+      })
+      .then(notices => {
+        noticesContainer.innerHTML = '';
+        if (notices.length === 0) {
+          noticesContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 1rem 0;">No notices available.</div>';
+          return;
+        }
+
+        notices.forEach(notice => {
+          const div = document.createElement('div');
+          
+          const titleSpan = `<strong style="color: var(--text-primary);">${notice.noticeNumber}. ${notice.title}:</strong> `;
+          let contentHtml = notice.content;
+          
+          // Let's highlight some parts for premium look (just like the original HTML):
+          if (notice.title.toLowerCase().includes('refund policy')) {
+            contentHtml = contentHtml.replace('non-cancellable, non-transferable, and non-refundable', '<strong style="color: var(--danger);">non-cancellable, non-transferable, and non-refundable</strong>');
+          } else if (notice.title.toLowerCase().includes('eid period')) {
+            contentHtml = contentHtml.replace('14 May 2026 to 13 June 2026', '<span style="background: rgba(6, 182, 212, 0.15); color: var(--accent-secondary); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600;">14 May 2026 to 13 June 2026</span>');
+          } else if (notice.title.toLowerCase().includes('reporting time')) {
+            contentHtml = contentHtml.replace('30 minutes', '<span style="color: var(--success); text-decoration: underline; font-weight: 700;">30 minutes</span>');
+          }
+
+          div.innerHTML = `${titleSpan}${contentHtml}`;
+          noticesContainer.appendChild(div);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching notices:', error);
+        noticesContainer.innerHTML = `<div style="text-align: center; color: var(--danger); padding: 1rem 0;">❌ Failed to load notices.</div>`;
+      });
+  }
+
   // --- Logout Event Handler ---
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('userEmail');
+      localStorage.removeItem('userRole');
       showToast('🔒 Logged out successfully!', 'info');
       setTimeout(() => {
         window.location.href = 'signin.html';

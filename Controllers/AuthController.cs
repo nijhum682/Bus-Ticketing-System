@@ -48,7 +48,7 @@ namespace BusTicketingBackend.Controllers
                 return Unauthorized(new { message = "Invalid email or password." });
             }
 
-            return Ok(new { message = $"Welcome back, {user.Name}!", user = new { user.Name, user.Email } });
+            return Ok(new { message = $"Welcome back, {user.Name}!", user = new { user.Name, user.Email, user.Role } });
         }
 
         [HttpGet("profile")]
@@ -70,8 +70,18 @@ namespace BusTicketingBackend.Controllers
                 user.Name,
                 user.Email,
                 user.Phone,
-                user.CreatedAt
+                user.CreatedAt,
+                user.Role
             });
+        }
+
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _context.Users
+                .Select(u => new { u.Name, u.Username, u.Email, u.Phone, u.Role, u.CreatedAt })
+                .ToListAsync();
+            return Ok(users);
         }
     }
 

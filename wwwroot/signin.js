@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // API Call for Sign In
-      const apiBase = (window.location.protocol === 'file:') 
-        ? 'http://localhost:5080' 
-        : '';
+      const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
+        ? '' 
+        : 'http://localhost:5080';
 
       fetch(`${apiBase}/api/auth/signin`, {
         method: 'POST',
@@ -74,20 +74,28 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         body: JSON.stringify({ email: username, password: password }) // Using 'username' variable for email input
       })
-      .then(response => {
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
         if (response.ok) {
-          return response.json();
+          return data;
         } else {
-          return response.json().then(err => { throw new Error(err.message || 'Invalid credentials'); });
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
         }
       })
       .then(data => {
         showToast(data.message, 'success');
         signinForm.reset();
         localStorage.setItem('userEmail', data.user.email);
+        localStorage.setItem('userRole', data.user.role || 'User');
         setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 2500);
+          if (data.user.role === 'Admin') {
+            window.location.href = 'admin_dashboard.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        }, 1500);
       })
       .catch(error => {
         showToast(`❌ ${error.message}`, 'danger');

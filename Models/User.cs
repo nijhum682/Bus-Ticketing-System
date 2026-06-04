@@ -26,6 +26,10 @@ namespace BusTicketingBackend.Models
         [StringLength(20)]
         public string Phone { get; set; } = string.Empty;
 
+        [Required]
+        [StringLength(50)]
+        public string Role { get; set; } = "User";
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
