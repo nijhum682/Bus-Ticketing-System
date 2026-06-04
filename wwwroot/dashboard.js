@@ -8,6 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
 
+  // Search Controls
+  const fromInput = document.getElementById('fromInput');
+  const toInput = document.getElementById('toInput');
+  const swapBtn = document.getElementById('swapBtn');
+  const journeyDateInput = document.getElementById('journeyDateInput');
+  const searchBtn = document.getElementById('searchBtn');
+
   // --- Session Verification ---
   const userEmail = localStorage.getItem('userEmail');
   if (!userEmail) {
@@ -61,6 +68,54 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         window.location.href = 'signin.html';
       }, 1500);
+    });
+  }
+
+  // --- Route Search Interactivity ---
+
+  // 0. Initialize Flatpickr datepicker with dd/mm/yy format
+  if (journeyDateInput && typeof flatpickr !== 'undefined') {
+    flatpickr(journeyDateInput, {
+      dateFormat: "d/m/y", // dd/mm/yy format (2-digit year)
+      allowInput: true,
+      placeholder: "dd/mm/yy",
+      disableMobile: true
+    });
+  }
+
+  // 1. Swap destinations
+  if (swapBtn && fromInput && toInput) {
+    swapBtn.addEventListener('click', () => {
+      const temp = fromInput.value;
+      fromInput.value = toInput.value;
+      toInput.value = temp;
+      showToast('🔄 Destinations swapped', 'info');
+    });
+  }
+
+  // 2. Handle Search Button Submit
+  if (searchBtn && fromInput && toInput && journeyDateInput) {
+    searchBtn.addEventListener('click', () => {
+      const fromVal = fromInput.value;
+      const toVal = toInput.value;
+      const dateVal = journeyDateInput.value.trim();
+
+      if (!fromVal || !toVal) {
+        showToast('⚠️ Please select both From and To locations!', 'warning');
+        return;
+      }
+
+      if (fromVal === toVal) {
+        showToast('⚠️ From and To destinations cannot be the same!', 'warning');
+        return;
+      }
+
+      if (!dateVal) {
+        showToast('⚠️ Please enter a journey date!', 'warning');
+        return;
+      }
+
+      showToast(`🔍 Searching buses from ${fromVal} to ${toVal} on ${dateVal}...`, 'success');
     });
   }
 
