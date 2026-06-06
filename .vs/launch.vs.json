@@ -4,12 +4,12 @@
   "configurations": [
     {
       "type": "default",
-      "project": "index.html",
+      "project": "BusTicketingBackend.csproj",
       "name": "IIS Express",
-      "program": "C:\\Program Files\\IIS Express\\iisexpress.exe",
       "args": [
-        "/config:\"${workspaceRoot}\\.vs\\Bus Ticketing System.slnx\\config\\applicationhost.config\"",
-        "/site:\"Bus Ticketing System\""
+        "run",
+        "--launch-profile",
+        "IIS Express"
       ]
     }
   ]

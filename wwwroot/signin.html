@@ -5,69 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Database Systems Project: Smart Bus Ticketing and Reservation System. High-fidelity glassmorphic user signin portal.">
   <title>Travello - Database Sign In Portal</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=25">
 </head>
-<body>
-
-  <div class="signup-wrapper">
+<body class="signin-page">
+  <div class="auth-split-container">
     
-    <!-- Main Signin Form Card -->
-    <main class="signup-main">
-      <section class="card signup-card">
+    <!-- Left Pane: Bus Image & Brand Message -->
+    <div class="auth-left-pane">
+      <div class="auth-image-content">
+        <h1 class="auth-image-title">Think Tickets,<br>Think Travello</h1>
+      </div>
+      <button class="auth-lang-btn" aria-label="Language selection">A/文</button>
+    </div>
+
+    <!-- Right Pane: Signin Form -->
+    <div class="auth-right-pane">
+      <div class="auth-form-content">
         
-        <!-- Header / Logo -->
-        <div class="logo-container">
-          <div class="logo-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1"></path>
-              <circle cx="7.5" cy="17.5" r="2.5"></circle>
-              <circle cx="16.5" cy="17.5" r="2.5"></circle>
+        <!-- Logo Row -->
+        <div class="auth-logo-row">
+          <div class="auth-logo"><span class="auth-logo-text">tr<span class="logo-green">a</span>vello</span><svg viewBox="0 0 24 24" width="28" height="28" stroke="#006a4e" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.2 10.6 16 10 16 10c0-1.7-1.3-3-3-3H8c-1.7 0-3 1.3-3 3 0 0-2.2.6-3.5 1.1C.7 10.3 0 11.1 0 12v3c0 .6.4 1 1 1h2"></path>
+              <path d="M5 17h12"></path>
+              <circle cx="7" cy="17" r="2.5"></circle>
+              <circle cx="7" cy="17" r="1" style="fill: #006a4e !important; stroke: none !important;"></circle>
+              <circle cx="17" cy="17" r="2.5"></circle>
+              <circle cx="17" cy="17" r="1" style="fill: #006a4e !important; stroke: none !important;"></circle>
             </svg>
-          </div>
-          <div class="logo-text">
-            Travello
-            <span>Bus Database v1.0</span>
           </div>
         </div>
 
-        <h1 class="signup-title">
-          <svg class="header-icon" viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-            <polyline points="10 17 15 12 10 7"></polyline>
-            <line x1="15" y1="12" x2="3" y2="12"></line>
-          </svg>
-          Sign In
-        </h1>
-        
+        <h2 class="auth-welcome-title">Welcome</h2>
+        <p class="auth-welcome-sub">Login with your <span class="brand-bold">Travello</span> account and enjoy a seamless journey across all services</p>
+
         <!-- Signin Form -->
-        <form id="signinForm" class="signup-form" novalidate>
+        <form id="signinForm" class="auth-light-form" novalidate>
           
           <!-- Field 1: Username -->
           <div class="form-group">
-            <input type="text" id="usernameInput" name="username" class="form-input" placeholder="Username" autocomplete="username" required>
+            <label class="form-label" for="usernameInput">Username <span class="req">*</span></label>
+            <input type="text" id="usernameInput" name="username" class="form-input" placeholder="Enter username" autocomplete="username" required>
           </div>
 
           <!-- Field 2: Password with Eye Toggle -->
           <div class="form-group password-group">
-            <input type="password" id="passwordInput" name="password" class="form-input" placeholder="Password" autocomplete="current-password" required>
-            <button type="button" id="passwordToggleBtn" class="password-toggle-btn" aria-label="Toggle password visibility">
-              <svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </button>
+            <label class="form-label" for="passwordInput">Password <span class="req">*</span></label>
+            <div style="position: relative; width: 100%;">
+              <input type="password" id="passwordInput" name="password" class="form-input" placeholder="Enter password" autocomplete="current-password" required>
+              <button type="button" id="passwordToggleBtn" class="password-toggle-btn" aria-label="Toggle password visibility">
+                <svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Forgot Password -->
+          <div class="auth-forgot-row">
+            <a href="#" class="auth-forgot-link">Forgot Password</a>
           </div>
 
           <!-- Action Buttons -->
-          <div class="signup-actions">
-            <button type="submit" class="action-btn btn-primary">
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Submit
-            </button>
-            <a href="index.html" class="action-btn btn-secondary text-center">
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <button type="submit" class="auth-submit-btn">
+            Log In
+          </button>
+          
+          <div style="margin-top: 0.5rem;">
+            <a href="index.html" class="auth-forgot-link auth-back-btn" style="text-decoration: none;">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
@@ -77,12 +83,16 @@
 
         </form>
 
-        <p class="auth-redirect">
-          Not registered yet? <a href="signup.html" class="link-btn">Sign Up</a>
+        <p class="auth-footer-redirect">
+          Don't have an account? <a href="signup.html" class="auth-redirect-link">Create Account</a>
         </p>
 
-      </section>
-    </main>
+        <div class="auth-copyright">
+          © Travello 2026
+        </div>
+
+      </div>
+    </div>
 
   </div>
 

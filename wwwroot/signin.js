@@ -142,4 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
       toast.classList.remove('show');
     }, 4000);
   }
+
+  // --- Interactive Mouse Tracker for Right Pane ---
+  const rightPane = document.querySelector('.auth-right-pane');
+  if (rightPane) {
+    rightPane.addEventListener('mousemove', (e) => {
+      const rect = rightPane.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      rightPane.style.setProperty('--mouse-x', `${x}%`);
+      rightPane.style.setProperty('--mouse-y', `${y}%`);
+    });
+  }
 });
