@@ -64,6 +64,27 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermanentDistrict` VARCHAR(100) NOT NULL DEFAULT '';");
+        Console.WriteLine("Successfully added 'PermanentDistrict' column to 'Users' table.");
+    }
+    catch (Exception) {}
+
+    try
+    {
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `Gender` VARCHAR(20) NOT NULL DEFAULT '';");
+        Console.WriteLine("Successfully added 'Gender' column to 'Users' table.");
+    }
+    catch (Exception) {}
+
+    try
+    {
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `Profession` VARCHAR(100) NOT NULL DEFAULT '';");
+        Console.WriteLine("Successfully added 'Profession' column to 'Users' table.");
+    }
+    catch (Exception) {}
+
+    try
+    {
         // 2. Create Notices table if it doesn't exist
         await context.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS `Notices` (

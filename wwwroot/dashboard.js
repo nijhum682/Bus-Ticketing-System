@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameDisplay = document.getElementById('nameDisplay');
   const emailDisplay = document.getElementById('emailDisplay');
   const phoneDisplay = document.getElementById('phoneDisplay');
+  const permDistrictDisplay = document.getElementById('permDistrictDisplay');
+  const genderDisplay = document.getElementById('genderDisplay');
+  const professionDisplay = document.getElementById('professionDisplay');
   const dateDisplay = document.getElementById('dateDisplay');
   const logoutBtn = document.getElementById('logoutBtn');
   const toast = document.getElementById('toast');
@@ -44,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nameDisplay) nameDisplay.textContent = user.name;
       if (emailDisplay) emailDisplay.textContent = user.email;
       if (phoneDisplay) phoneDisplay.textContent = user.phone || 'N/A';
+      if (permDistrictDisplay) permDistrictDisplay.textContent = user.permanentDistrict || 'N/A';
+      if (genderDisplay) genderDisplay.textContent = user.gender || 'N/A';
+      if (professionDisplay) professionDisplay.textContent = user.profession || 'N/A';
       
       // Format CreatedAt date nicely
       if (dateDisplay && user.createdAt) {
@@ -62,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nameDisplay) nameDisplay.textContent = 'Error loading profile';
       if (emailDisplay) emailDisplay.textContent = 'Error loading profile';
       if (phoneDisplay) phoneDisplay.textContent = 'Error loading profile';
+      if (permDistrictDisplay) permDistrictDisplay.textContent = 'Error loading profile';
+      if (genderDisplay) genderDisplay.textContent = 'Error loading profile';
+      if (professionDisplay) professionDisplay.textContent = 'Error loading profile';
       if (dateDisplay) dateDisplay.textContent = 'Error loading profile';
     });
 
@@ -120,6 +129,100 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Route Search Interactivity ---
+
+  // --- Searchable Select Dropdown with 64 Districts ---
+  const districts = [
+    "Bagerhat", "Bandarban", "Barguna", "Barishal", "Bhola", "Bogura", "Brahmanbaria", 
+    "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Cox's Bazar", "Cumilla", 
+    "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", 
+    "Habiganj", "Jamalpur", "Jashore", "Jhalokathi", "Jhenaidah", "Joypurhat", 
+    "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lalmonirhat", 
+    "Laxmipur", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", 
+    "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", 
+    "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", 
+    "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", 
+    "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", 
+    "Tangail", "Thakurgaon"
+  ];
+
+  function initSearchableSelect(inputId, dropdownId) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    if (!input || !dropdown) return;
+
+    function renderDropdown(filterText = '') {
+      dropdown.innerHTML = '';
+      const filtered = districts.filter(d => 
+        d.toLowerCase().includes(filterText.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        const noResult = document.createElement('div');
+        noResult.style.padding = '0.75rem 1rem';
+        noResult.style.color = 'var(--text-muted)';
+        noResult.style.fontSize = '0.85rem';
+        noResult.textContent = 'No district found';
+        dropdown.appendChild(noResult);
+        return;
+      }
+
+      filtered.forEach(district => {
+        const option = document.createElement('div');
+        option.style.padding = '0.65rem 1rem';
+        option.style.color = 'var(--text-secondary)';
+        option.style.cursor = 'pointer';
+        option.style.fontSize = '0.88rem';
+        option.style.transition = 'all var(--transition-fast)';
+        option.style.textAlign = 'left';
+        option.textContent = district;
+
+        option.addEventListener('mouseenter', () => {
+          option.style.background = 'rgba(6, 182, 212, 0.15)';
+          option.style.color = 'var(--text-primary)';
+          option.style.paddingLeft = '1.25rem';
+        });
+
+        option.addEventListener('mouseleave', () => {
+          option.style.background = 'transparent';
+          option.style.color = 'var(--text-secondary)';
+          option.style.paddingLeft = '1rem';
+        });
+
+        option.addEventListener('click', (e) => {
+          input.value = district;
+          dropdown.style.display = 'none';
+          e.stopPropagation();
+        });
+
+        dropdown.appendChild(option);
+      });
+    }
+
+    input.addEventListener('focus', () => {
+      renderDropdown(input.value);
+      dropdown.style.display = 'block';
+    });
+
+    input.addEventListener('input', () => {
+      renderDropdown(input.value);
+      dropdown.style.display = 'block';
+    });
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    input.addEventListener('click', (e) => {
+      dropdown.style.display = 'block';
+      e.stopPropagation();
+    });
+  }
+
+  initSearchableSelect('fromInput', 'fromDropdown');
+  initSearchableSelect('toInput', 'toDropdown');
 
   // 0. Initialize Flatpickr datepicker with dd/mm/yy format
   if (journeyDateInput && typeof flatpickr !== 'undefined') {

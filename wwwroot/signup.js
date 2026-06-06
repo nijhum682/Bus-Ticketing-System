@@ -137,6 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
         email: email,
         password: password,
         phone: phone,
+        permanentDistrict: permDistrict,
+        gender: genderChecked ? genderChecked.value : 'Male',
+        profession: profession,
         role: role
       };
 

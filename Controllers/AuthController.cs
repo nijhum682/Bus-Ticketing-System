@@ -70,6 +70,9 @@ namespace BusTicketingBackend.Controllers
                 user.Name,
                 user.Email,
                 user.Phone,
+                user.PermanentDistrict,
+                user.Gender,
+                user.Profession,
                 user.CreatedAt,
                 user.Role
             });

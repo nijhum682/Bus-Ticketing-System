@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Lock body and html scroll on homepage
+  document.documentElement.style.overflow = 'hidden';
+  document.documentElement.style.height = '100%';
+  document.body.style.overflow = 'hidden';
+  document.body.style.height = '100%';
+
   // --- DOM Elements ---
   const signInBtn = document.getElementById('signInBtn');
   const signUpBtn = document.getElementById('signUpBtn');
