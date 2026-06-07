@@ -90,9 +90,79 @@ namespace BusTicketingBackend.Controllers
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _context.Users
-                .Select(u => new { u.Name, u.Username, u.Email, u.Phone, u.Role, u.CreatedAt })
+                .Select(u => new { 
+                    u.Name, 
+                    u.Username, 
+                    u.Email, 
+                    u.Phone, 
+                    u.Role, 
+                    u.CreatedAt,
+                    u.Gender,
+                    u.PermanentDistrict,
+                    u.Profession,
+                    u.PresArea,
+                    u.PresUpazilla,
+                    u.PresDistrict,
+                    u.PresDivision,
+                    u.PermArea,
+                    u.PermUpazilla,
+                    u.PermDivision
+                })
                 .ToListAsync();
             return Ok(users);
+        }
+
+        [HttpPost("users/update")]
+        public async Task<IActionResult> AdminUpdateUser([FromBody] AdminUpdateUserModel model)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+                {
+                    return BadRequest(new { message = "Email address is already registered." });
+                }
+                user.Email = model.Email;
+            }
+
+            user.Name = model.Name;
+            user.Phone = model.Phone ?? string.Empty;
+            user.Gender = model.Gender ?? string.Empty;
+            user.PermanentDistrict = model.PermanentDistrict ?? string.Empty;
+            user.Profession = model.Profession ?? string.Empty;
+            user.PresArea = model.PresArea ?? string.Empty;
+            user.PresUpazilla = model.PresUpazilla ?? string.Empty;
+            user.PresDistrict = model.PresDistrict ?? string.Empty;
+            user.PresDivision = model.PresDivision ?? string.Empty;
+            user.PermArea = model.PermArea ?? string.Empty;
+            user.PermUpazilla = model.PermUpazilla ?? string.Empty;
+            user.PermDivision = model.PermDivision ?? string.Empty;
+            user.Role = model.Role ?? "User";
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User updated successfully!" });
+        }
+
+        [HttpDelete("users/{username}")]
+        public async Task<IActionResult> DeleteUser(string username)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User deleted successfully!" });
         }
 
         [HttpPost("profile/update")]
@@ -166,5 +236,24 @@ namespace BusTicketingBackend.Controllers
         public string PermArea { get; set; } = string.Empty;
         public string PermUpazilla { get; set; } = string.Empty;
         public string PermDivision { get; set; } = string.Empty;
+    }
+
+    public class AdminUpdateUserModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string PermanentDistrict { get; set; } = string.Empty;
+        public string Profession { get; set; } = string.Empty;
+        public string PresArea { get; set; } = string.Empty;
+        public string PresUpazilla { get; set; } = string.Empty;
+        public string PresDistrict { get; set; } = string.Empty;
+        public string PresDivision { get; set; } = string.Empty;
+        public string PermArea { get; set; } = string.Empty;
+        public string PermUpazilla { get; set; } = string.Empty;
+        public string PermDivision { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
     }
 }

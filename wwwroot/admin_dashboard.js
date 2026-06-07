@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     : 'http://localhost:5080';
 
   let currentUser = null;
+  let allRegisteredUsers = [];
 
   function loadProfile() {
     const email = localStorage.getItem('userEmail');
@@ -444,6 +445,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function renderUsers(users) {
+    userTableBody.innerHTML = '';
+    if (users.length === 0) {
+      userTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-secondary);">No registered users found.</td></tr>`;
+      return;
+    }
+
+    users.forEach(user => {
+      const tr = document.createElement('tr');
+      const isUserAdmin = user.role === 'Admin';
+      
+      const permanentDistrict = user.permanentDistrict || 'N/A';
+
+      tr.innerHTML = `
+        <td style="color: var(--text-primary); font-weight: 500;">${escapeHtml(user.name)}</td>
+        <td>${escapeHtml(user.username)}</td>
+        <td>${escapeHtml(user.email)}</td>
+        <td>${escapeHtml(user.phone || 'N/A')}</td>
+        <td>${escapeHtml(user.gender || 'N/A')}</td>
+        <td>${escapeHtml(permanentDistrict)}</td>
+        <td>${escapeHtml(user.profession || 'N/A')}</td>
+        <td><span class="role-badge ${isUserAdmin ? 'admin' : 'user'}">${isUserAdmin ? 'Admin' : 'User'}</span></td>
+        <td>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="action-btn btn-secondary edit-user-row-btn" data-username="${escapeHtml(user.username)}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; height: 32px; flex: none;">Edit</button>
+            <button class="action-btn btn-secondary delete-user-row-btn" data-username="${escapeHtml(user.username)}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; height: 32px; flex: none; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">Delete</button>
+          </div>
+        </td>
+      `;
+      userTableBody.appendChild(tr);
+    });
+  }
+
   // --- Load Registered Users ---
   function loadUsers() {
     fetch(`${apiBase}/api/auth/users`)
@@ -452,29 +486,54 @@ document.addEventListener('DOMContentLoaded', () => {
         return response.json();
       })
       .then(users => {
-        userTableBody.innerHTML = '';
-        if (users.length === 0) {
-          userTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No registered users found.</td></tr>`;
-          return;
+        allRegisteredUsers = users;
+        
+        // Reset search input value when reloading
+        const userSearchInput = document.getElementById('userSearchInput');
+        if (userSearchInput) {
+          userSearchInput.value = '';
         }
-
-        users.forEach(user => {
-          const tr = document.createElement('tr');
-          const isUserAdmin = user.role === 'Admin';
-          tr.innerHTML = `
-            <td style="color: var(--text-primary); font-weight: 500;">${escapeHtml(user.name)}</td>
-            <td>${escapeHtml(user.username)}</td>
-            <td>${escapeHtml(user.email)}</td>
-            <td>${escapeHtml(user.phone || 'N/A')}</td>
-            <td><span class="role-badge ${isUserAdmin ? 'admin' : 'user'}">${isUserAdmin ? 'Admin' : 'User'}</span></td>
-          `;
-          userTableBody.appendChild(tr);
-        });
+        
+        renderUsers(users);
       })
       .catch(error => {
         console.error(error);
-        userTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger);">❌ Error loading users database: ${error.message}</td></tr>`;
+        userTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger);">❌ Error loading users database: ${error.message}</td></tr>`;
       });
+  }
+
+  // --- Search Users Event Listener ---
+  const userSearchInput = document.getElementById('userSearchInput');
+  if (userSearchInput) {
+    userSearchInput.addEventListener('input', () => {
+      const query = userSearchInput.value.toLowerCase().trim();
+      if (!query) {
+        renderUsers(allRegisteredUsers);
+        return;
+      }
+
+      const filtered = allRegisteredUsers.filter(user => {
+        const name = (user.name || '').toLowerCase();
+        const username = (user.username || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+        const phone = (user.phone || '').toLowerCase();
+        const gender = (user.gender || '').toLowerCase();
+        const district = (user.permanentDistrict || '').toLowerCase();
+        const profession = (user.profession || '').toLowerCase();
+        const role = (user.role || '').toLowerCase();
+
+        return name.includes(query) ||
+               username.includes(query) ||
+               email.includes(query) ||
+               phone.includes(query) ||
+               gender.includes(query) ||
+               district.includes(query) ||
+               profession.includes(query) ||
+               role.includes(query);
+      });
+
+      renderUsers(filtered);
+    });
   }
 
   // --- Load Notice Board List ---
@@ -721,5 +780,250 @@ document.addEventListener('DOMContentLoaded', () => {
     toastTimeout = setTimeout(() => {
       toast.classList.remove('show');
     }, 4000);
+  }
+
+  // --- Admin User CRUD Modal and Actions ---
+  const adminEditUserModal = document.getElementById('adminEditUserModal');
+  const adminEditUserForm = document.getElementById('adminEditUserForm');
+  const adminEditUserNameInput = document.getElementById('adminEditUserNameInput');
+  const adminEditUserUsernameInput = document.getElementById('adminEditUserUsernameInput');
+  const adminEditUserEmailInput = document.getElementById('adminEditUserEmailInput');
+  const adminEditUserPhoneInput = document.getElementById('adminEditUserPhoneInput');
+  const adminEditUserPresAreaInput = document.getElementById('adminEditUserPresAreaInput');
+  const adminEditUserPresUpazillaInput = document.getElementById('adminEditUserPresUpazillaInput');
+  const adminEditUserPresDistrictInput = document.getElementById('adminEditUserPresDistrictInput');
+  const adminEditUserPresDivisionInput = document.getElementById('adminEditUserPresDivisionInput');
+  const adminEditUserPermAreaInput = document.getElementById('adminEditUserPermAreaInput');
+  const adminEditUserPermUpazillaInput = document.getElementById('adminEditUserPermUpazillaInput');
+  const adminEditUserPermDistrictInput = document.getElementById('adminEditUserPermDistrictInput');
+  const adminEditUserPermDivisionInput = document.getElementById('adminEditUserPermDivisionInput');
+  const adminEditUserGenderInput = document.getElementById('adminEditUserGenderInput');
+  const adminEditUserProfessionInput = document.getElementById('adminEditUserProfessionInput');
+  const adminEditUserRoleInput = document.getElementById('adminEditUserRoleInput');
+  const closeAdminEditUserModalBtn = document.getElementById('closeAdminEditUserModalBtn');
+  const adminSaveUserChangesBtn = document.getElementById('adminSaveUserChangesBtn');
+
+  let editingUserObject = null;
+
+  function checkAdminEditUserChanges() {
+    if (!editingUserObject || !adminSaveUserChangesBtn) return;
+
+    const nameVal = adminEditUserNameInput ? adminEditUserNameInput.value.trim() : '';
+    const emailVal = adminEditUserEmailInput ? adminEditUserEmailInput.value.trim() : '';
+    const phoneVal = adminEditUserPhoneInput ? adminEditUserPhoneInput.value.trim() : '';
+    const genderVal = adminEditUserGenderInput ? adminEditUserGenderInput.value : 'Male';
+    const professionVal = adminEditUserProfessionInput ? adminEditUserProfessionInput.value.trim() : '';
+    const roleVal = adminEditUserRoleInput ? adminEditUserRoleInput.value : 'User';
+
+    const presAreaVal = adminEditUserPresAreaInput ? adminEditUserPresAreaInput.value.trim() : '';
+    const presUpazillaVal = adminEditUserPresUpazillaInput ? adminEditUserPresUpazillaInput.value.trim() : '';
+    const presDistrictVal = adminEditUserPresDistrictInput ? adminEditUserPresDistrictInput.value.trim() : '';
+    const presDivisionVal = adminEditUserPresDivisionInput ? adminEditUserPresDivisionInput.value.trim() : '';
+
+    const permAreaVal = adminEditUserPermAreaInput ? adminEditUserPermAreaInput.value.trim() : '';
+    const permUpazillaVal = adminEditUserPermUpazillaInput ? adminEditUserPermUpazillaInput.value.trim() : '';
+    const permDistrictVal = adminEditUserPermDistrictInput ? adminEditUserPermDistrictInput.value.trim() : '';
+    const permDivisionVal = adminEditUserPermDivisionInput ? adminEditUserPermDivisionInput.value.trim() : '';
+
+    const nameChanged = nameVal !== (editingUserObject.name || '').trim();
+    const emailChanged = emailVal !== (editingUserObject.email || '').trim();
+    const phoneChanged = phoneVal !== (editingUserObject.phone || '').trim();
+    const genderChanged = genderVal !== (editingUserObject.gender || 'Male');
+    const professionChanged = professionVal !== (editingUserObject.profession || '').trim();
+    const roleChanged = roleVal !== (editingUserObject.role || 'User');
+
+    const presAddressChanged = presAreaVal !== (editingUserObject.presArea || '').trim() ||
+                              presUpazillaVal !== (editingUserObject.presUpazilla || '').trim() ||
+                              presDistrictVal !== (editingUserObject.presDistrict || '').trim() ||
+                              presDivisionVal !== (editingUserObject.presDivision || '').trim();
+
+    const permAddressChanged = permAreaVal !== (editingUserObject.permArea || '').trim() ||
+                              permUpazillaVal !== (editingUserObject.permUpazilla || '').trim() ||
+                              permDistrictVal !== (editingUserObject.permanentDistrict || editingUserObject.permDistrict || '').trim() ||
+                              permDivisionVal !== (editingUserObject.permDivision || '').trim();
+
+    const hasChanges = nameChanged || emailChanged || phoneChanged || genderChanged || professionChanged || roleChanged || presAddressChanged || permAddressChanged;
+    adminSaveUserChangesBtn.disabled = !hasChanges;
+  }
+
+  const adminEditFields = [
+    adminEditUserNameInput, adminEditUserEmailInput, adminEditUserPhoneInput,
+    adminEditUserPresAreaInput, adminEditUserPresUpazillaInput, adminEditUserPresDistrictInput, adminEditUserPresDivisionInput,
+    adminEditUserPermAreaInput, adminEditUserPermUpazillaInput, adminEditUserPermDistrictInput, adminEditUserPermDivisionInput,
+    adminEditUserProfessionInput
+  ];
+  adminEditFields.forEach(input => {
+    if (input) {
+      input.addEventListener('input', checkAdminEditUserChanges);
+    }
+  });
+  if (adminEditUserGenderInput) adminEditUserGenderInput.addEventListener('change', checkAdminEditUserChanges);
+  if (adminEditUserRoleInput) adminEditUserRoleInput.addEventListener('change', checkAdminEditUserChanges);
+
+  if (closeAdminEditUserModalBtn && adminEditUserModal) {
+    closeAdminEditUserModalBtn.addEventListener('click', () => {
+      adminEditUserModal.style.display = 'none';
+    });
+  }
+
+  // Row actions delegation click handler
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('edit-user-row-btn')) {
+      const username = e.target.getAttribute('data-username');
+      const user = allRegisteredUsers.find(u => u.username === username);
+      if (!user) return;
+
+      editingUserObject = user;
+
+      // Populate edit modal fields
+      if (adminEditUserNameInput) adminEditUserNameInput.value = user.name || '';
+      if (adminEditUserUsernameInput) adminEditUserUsernameInput.value = user.username || '';
+      if (adminEditUserEmailInput) adminEditUserEmailInput.value = user.email || '';
+      if (adminEditUserPhoneInput) adminEditUserPhoneInput.value = user.phone || '';
+      if (adminEditUserPresAreaInput) adminEditUserPresAreaInput.value = user.presArea || '';
+      if (adminEditUserPresUpazillaInput) adminEditUserPresUpazillaInput.value = user.presUpazilla || '';
+      if (adminEditUserPresDistrictInput) adminEditUserPresDistrictInput.value = user.presDistrict || '';
+      if (adminEditUserPresDivisionInput) adminEditUserPresDivisionInput.value = user.presDivision || '';
+      if (adminEditUserPermAreaInput) adminEditUserPermAreaInput.value = user.permArea || '';
+      if (adminEditUserPermUpazillaInput) adminEditUserPermUpazillaInput.value = user.permUpazilla || '';
+      if (adminEditUserPermDistrictInput) adminEditUserPermDistrictInput.value = user.permanentDistrict || user.permDistrict || '';
+      if (adminEditUserPermDivisionInput) adminEditUserPermDivisionInput.value = user.permDivision || '';
+      if (adminEditUserGenderInput) adminEditUserGenderInput.value = user.gender || 'Male';
+      if (adminEditUserProfessionInput) adminEditUserProfessionInput.value = user.profession || '';
+      if (adminEditUserRoleInput) adminEditUserRoleInput.value = user.role || 'User';
+
+      checkAdminEditUserChanges();
+
+      if (adminEditUserModal) adminEditUserModal.style.display = 'flex';
+    }
+
+    if (e.target.classList.contains('delete-user-row-btn')) {
+      const username = e.target.getAttribute('data-username');
+      
+      // Prevent deleting themselves!
+      if (username === currentUser.username) {
+        showToast('⚠️ You cannot delete your own admin account!', 'warning');
+        return;
+      }
+
+      if (confirm(`Are you sure you want to permanently delete user "${username}" from the database registry?`)) {
+        fetch(`${apiBase}/api/auth/users/${encodeURIComponent(username)}`, {
+          method: 'DELETE'
+        })
+        .then(async response => {
+          const isJson = response.headers.get('content-type')?.includes('application/json');
+          const data = isJson ? await response.json() : null;
+          if (response.ok) {
+            return data;
+          } else {
+            const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+            throw new Error(errMsg);
+          }
+        })
+        .then(() => {
+          showToast(`🎉 User "${username}" deleted successfully.`, 'success');
+          loadUsers();
+        })
+        .catch(error => {
+          showToast(`❌ Error: ${error.message}`, 'danger');
+        });
+      }
+    }
+  });
+
+  if (adminEditUserForm) {
+    adminEditUserForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      if (!editingUserObject) return;
+
+      const name = adminEditUserNameInput ? adminEditUserNameInput.value.trim() : '';
+      const email = adminEditUserEmailInput ? adminEditUserEmailInput.value.trim() : '';
+      const phone = adminEditUserPhoneInput ? adminEditUserPhoneInput.value.trim() : '';
+      const gender = adminEditUserGenderInput ? adminEditUserGenderInput.value : '';
+      const profession = adminEditUserProfessionInput ? adminEditUserProfessionInput.value.trim() : '';
+      const role = adminEditUserRoleInput ? adminEditUserRoleInput.value : 'User';
+
+      const presArea = adminEditUserPresAreaInput ? adminEditUserPresAreaInput.value.trim() : '';
+      const presUpazilla = adminEditUserPresUpazillaInput ? adminEditUserPresUpazillaInput.value.trim() : '';
+      const presDistrict = adminEditUserPresDistrictInput ? adminEditUserPresDistrictInput.value.trim() : '';
+      const presDivision = adminEditUserPresDivisionInput ? adminEditUserPresDivisionInput.value.trim() : '';
+
+      const permArea = adminEditUserPermAreaInput ? adminEditUserPermAreaInput.value.trim() : '';
+      const permUpazilla = adminEditUserPermUpazillaInput ? adminEditUserPermUpazillaInput.value.trim() : '';
+      const permDistrict = adminEditUserPermDistrictInput ? adminEditUserPermDistrictInput.value.trim() : '';
+      const permDivision = adminEditUserPermDivisionInput ? adminEditUserPermDivisionInput.value.trim() : '';
+
+      if (!name || !email || !phone || !profession ||
+          !presArea || !presUpazilla || !presDistrict || !presDivision ||
+          !permArea || !permUpazilla || !permDistrict || !permDivision) {
+        showToast('⚠️ Please fill out all required fields.', 'warning');
+        return;
+      }
+
+      // Email format check
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showToast('⚠️ Please enter a valid email address.', 'warning');
+        return;
+      }
+
+      // Phone format check
+      if (phone.length < 7 || isNaN(phone.replace(/[+\-\s()]/g, ''))) {
+        showToast('⚠️ Please enter a valid phone number.', 'warning');
+        return;
+      }
+
+      const updateData = {
+        username: editingUserObject.username,
+        name: name,
+        email: email,
+        phone: phone,
+        permanentDistrict: permDistrict,
+        gender: gender,
+        profession: profession,
+        presArea: presArea,
+        presUpazilla: presUpazilla,
+        presDistrict: presDistrict,
+        presDivision: presDivision,
+        permArea: permArea,
+        permUpazilla: permUpazilla,
+        permDivision: permDivision,
+        role: role
+      };
+
+      fetch(`${apiBase}/api/auth/users/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
+        if (response.ok) {
+          return data;
+        } else {
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
+        }
+      })
+      .then(data => {
+        showToast('🎉 User updated successfully by admin!', 'success');
+        adminEditUserModal.style.display = 'none';
+        
+        // If the admin edited their own profile, we should reload it
+        if (editingUserObject.email === localStorage.getItem('userEmail')) {
+          localStorage.setItem('userEmail', email); // in case they changed email
+          loadProfile();
+        }
+        
+        loadUsers();
+      })
+      .catch(error => {
+        showToast(`❌ Error: ${error.message}`, 'danger');
+      });
+    });
   }
 });
