@@ -83,6 +83,14 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception) {}
 
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresArea` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresUpazilla` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresDistrict` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresDivision` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermArea` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermUpazilla` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermDivision` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
+
     try
     {
         // 2. Create Notices table if it doesn't exist

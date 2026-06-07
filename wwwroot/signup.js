@@ -138,6 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
         password: password,
         phone: phone,
         permanentDistrict: permDistrict,
+        presArea: presArea,
+        presUpazilla: presUpazilla,
+        presDistrict: presDistrict,
+        presDivision: presDivision,
+        permArea: permArea,
+        permUpazilla: permUpazilla,
+        permDivision: permDivision,
         gender: genderChecked ? genderChecked.value : 'Male',
         profession: profession,
         role: role

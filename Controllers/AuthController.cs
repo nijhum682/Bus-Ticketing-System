@@ -68,13 +68,21 @@ namespace BusTicketingBackend.Controllers
 
             return Ok(new {
                 user.Name,
+                user.Username,
                 user.Email,
                 user.Phone,
                 user.PermanentDistrict,
                 user.Gender,
                 user.Profession,
                 user.CreatedAt,
-                user.Role
+                user.Role,
+                user.PresArea,
+                user.PresUpazilla,
+                user.PresDistrict,
+                user.PresDivision,
+                user.PermArea,
+                user.PermUpazilla,
+                user.PermDivision
             });
         }
 
@@ -86,11 +94,77 @@ namespace BusTicketingBackend.Controllers
                 .ToListAsync();
             return Ok(users);
         }
+
+        [HttpPost("profile/update")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileModel model)
+        {
+            if (string.IsNullOrEmpty(model.CurrentEmail))
+            {
+                return BadRequest(new { message = "Current email is required." });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.CurrentEmail);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+                {
+                    return BadRequest(new { message = "Email address is already registered." });
+                }
+                user.Email = model.Email;
+            }
+
+            user.Name = model.Name;
+            user.Phone = model.Phone ?? string.Empty;
+            user.PermanentDistrict = model.PermanentDistrict ?? string.Empty;
+            user.Gender = model.Gender ?? string.Empty;
+            user.Profession = model.Profession ?? string.Empty;
+            user.PresArea = model.PresArea ?? string.Empty;
+            user.PresUpazilla = model.PresUpazilla ?? string.Empty;
+            user.PresDistrict = model.PresDistrict ?? string.Empty;
+            user.PresDivision = model.PresDivision ?? string.Empty;
+            user.PermArea = model.PermArea ?? string.Empty;
+            user.PermUpazilla = model.PermUpazilla ?? string.Empty;
+            user.PermDivision = model.PermDivision ?? string.Empty;
+
+            if (!string.IsNullOrEmpty(model.NewPassword))
+            {
+                user.Password = model.NewPassword;
+            }
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Profile updated successfully!", email = user.Email });
+        }
     }
 
     public class SignInModel
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileModel
+    {
+        public string CurrentEmail { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string PermanentDistrict { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string Profession { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string PresArea { get; set; } = string.Empty;
+        public string PresUpazilla { get; set; } = string.Empty;
+        public string PresDistrict { get; set; } = string.Empty;
+        public string PresDivision { get; set; } = string.Empty;
+        public string PermArea { get; set; } = string.Empty;
+        public string PermUpazilla { get; set; } = string.Empty;
+        public string PermDivision { get; set; } = string.Empty;
     }
 }

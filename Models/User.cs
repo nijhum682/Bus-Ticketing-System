@@ -29,6 +29,27 @@ namespace BusTicketingBackend.Models
         [StringLength(100)]
         public string PermanentDistrict { get; set; } = string.Empty;
 
+        [StringLength(100)]
+        public string PresArea { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PresUpazilla { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PresDistrict { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PresDivision { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PermArea { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PermUpazilla { get; set; } = string.Empty;
+
+        [StringLength(100)]
+        public string PermDivision { get; set; } = string.Empty;
+
         [StringLength(20)]
         public string Gender { get; set; } = string.Empty;
 
