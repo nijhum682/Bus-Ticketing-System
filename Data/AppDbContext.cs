@@ -9,5 +9,6 @@ namespace BusTicketingBackend.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Notice> Notices { get; set; }
+        public DbSet<Bus> Buses { get; set; }
     }
 }

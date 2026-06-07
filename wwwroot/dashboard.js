@@ -513,6 +513,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- Bus Search & Booking ---
+  const searchResultsSection = document.getElementById('searchResultsSection');
+  const resultsCount = document.getElementById('resultsCount');
+  const searchParamsLabel = document.getElementById('searchParamsLabel');
+  const busListingsContainer = document.getElementById('busListingsContainer');
+
+  // Booking Modal Elements
+  const bookingModal = document.getElementById('bookingModal');
+  const bookingBusOperator = document.getElementById('bookingBusOperator');
+  const bookingBusType = document.getElementById('bookingBusType');
+  const bookingBusRoute = document.getElementById('bookingBusRoute');
+  const bookingBusTime = document.getElementById('bookingBusTime');
+  const seatsGrid = document.getElementById('seatsGrid');
+  const selectedSeatLabel = document.getElementById('selectedSeatLabel');
+  const totalPriceLabel = document.getElementById('totalPriceLabel');
+  const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+  const closeBookingModalBtn = document.getElementById('closeBookingModalBtn');
+
+  let currentSearchingBuses = [];
+  let selectedBus = null;
+  let selectedSeat = null;
+
   // 2. Handle Search Button Submit
   if (searchBtn && fromInput && toInput && journeyDateInput) {
     searchBtn.addEventListener('click', () => {
@@ -536,6 +558,249 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       showToast(`🔍 Searching buses from ${fromVal} to ${toVal} on ${dateVal}...`, 'success');
+
+      // Fetch buses from API
+      fetch(`${apiBase}/api/bus/search?from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateVal)}`)
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to search buses.');
+          return response.json();
+        })
+        .then(buses => {
+          currentSearchingBuses = buses;
+          renderBuses(buses, fromVal, toVal, dateVal);
+        })
+        .catch(error => {
+          console.error(error);
+          showToast('❌ Error occurred while searching for buses.', 'danger');
+        });
+    });
+  }
+
+  function renderBuses(buses, fromVal, toVal, dateVal) {
+    if (!searchResultsSection || !busListingsContainer || !resultsCount || !searchParamsLabel) return;
+
+    resultsCount.textContent = buses.length;
+    searchParamsLabel.textContent = `${fromVal} ➔ ${toVal} | ${dateVal}`;
+    busListingsContainer.innerHTML = '';
+
+    if (buses.length === 0) {
+      busListingsContainer.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.9rem;">
+          No buses available for this route on the selected date.
+        </div>
+      `;
+    } else {
+      buses.forEach(bus => {
+        const card = document.createElement('div');
+        card.className = 'bus-listing-card';
+        card.style.background = 'rgba(255,255,255,0.02)';
+        card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = 'var(--border-radius-sm)';
+        card.style.padding = '1rem';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '0.75rem';
+        card.style.transition = 'all var(--transition-fast)';
+
+        // Hover effect for premium feel
+        card.addEventListener('mouseenter', () => {
+          card.style.borderColor = 'var(--border-color-active)';
+          card.style.background = 'rgba(255, 255, 255, 0.04)';
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.borderColor = 'var(--border-color)';
+          card.style.background = 'rgba(255,255,255,0.02)';
+        });
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h4 style="font-family: var(--font-header); font-weight: 700; font-size: 1.05rem; color: #ffffff; margin-bottom: 0.15rem; text-align: left;">${bus.operator}</h4>
+              <div style="text-align: left;">
+                <span style="font-size: 0.7rem; background: rgba(6, 182, 212, 0.12); color: var(--accent-secondary); padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600;">${bus.busType}</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff; font-family: var(--font-header);">৳${bus.fare.toLocaleString()}</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 0.6rem; font-size: 0.8rem; color: var(--text-secondary);">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="var(--warning)" stroke-width="2.5" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Departs: <strong style="color: var(--text-primary); font-weight: 600;">${bus.departureTime}</strong></span>
+            </div>
+            <span style="color: ${bus.availableSeats < 10 ? 'var(--danger)' : 'var(--success)'}; font-weight: 600;">${bus.availableSeats} Seats Left</span>
+          </div>
+
+          <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 36px; padding: 0; font-size: 0.85rem; font-weight: 600; width: 100%; margin-top: 0.25rem;">Book Ticket</button>
+        `;
+
+        // Add event listener to Book button
+        card.querySelector('.book-btn').addEventListener('click', () => {
+          openBookingModal(bus, dateVal);
+        });
+
+        busListingsContainer.appendChild(card);
+      });
+    }
+
+    searchResultsSection.style.display = 'block';
+    // Scroll search results into view smoothly
+    searchResultsSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function openBookingModal(bus, dateVal) {
+    if (!bookingModal || !bookingBusOperator || !bookingBusType || !bookingBusRoute || !bookingBusTime) return;
+
+    selectedBus = bus;
+    selectedSeat = null;
+
+    bookingBusOperator.textContent = bus.operator;
+    bookingBusType.textContent = bus.busType;
+    bookingBusRoute.textContent = `${bus.fromDistrict} ➔ ${bus.toDistrict}`;
+    bookingBusTime.textContent = bus.departureTime;
+
+    selectedSeatLabel.textContent = 'None';
+    selectedSeatLabel.style.color = 'var(--success)';
+    totalPriceLabel.textContent = '৳0';
+    if (confirmBookingBtn) confirmBookingBtn.disabled = true;
+
+    // Generate seats
+    generateSeatsGrid(bus, dateVal);
+
+    bookingModal.style.display = 'flex';
+  }
+
+  function generateSeatsGrid(bus, dateVal) {
+    if (!seatsGrid) return;
+    seatsGrid.innerHTML = '';
+
+    const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const cols = ['1', '2', '', '3', '4']; // Empty represents corridor
+
+    // Generate deterministic booked seats based on bus id and date
+    const seedStr = `${bus.id}_${dateVal}`;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      hash = (hash * 31) + seedStr.charCodeAt(i);
+    }
+    
+    // Deterministic random generator
+    function seededRandom(i) {
+      const x = Math.sin(hash + i) * 10000;
+      return x - Math.floor(x);
+    }
+
+    let seatIdx = 0;
+    rows.forEach(row => {
+      cols.forEach(col => {
+        if (col === '') {
+          // Corridor
+          const space = document.createElement('div');
+          space.style.width = '20px';
+          seatsGrid.appendChild(space);
+        } else {
+          seatIdx++;
+          const seatName = `${row}${col}`;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = seatName;
+          
+          btn.style.width = '36px';
+          btn.style.height = '36px';
+          btn.style.fontSize = '0.75rem';
+          btn.style.fontWeight = '600';
+          btn.style.border = '1px solid var(--border-color)';
+          btn.style.borderRadius = '6px';
+          btn.style.cursor = 'pointer';
+          btn.style.transition = 'all var(--transition-fast)';
+
+          // Determine if pre-booked (approx 55% probability)
+          const isBooked = seededRandom(seatIdx) < 0.55;
+          if (isBooked) {
+            btn.style.background = 'rgba(255, 255, 255, 0.05)';
+            btn.style.color = 'var(--text-muted)';
+            btn.style.borderColor = 'rgba(255, 255, 255, 0.03)';
+            btn.style.cursor = 'not-allowed';
+            btn.disabled = true;
+          } else {
+            btn.style.background = 'rgba(16, 185, 129, 0.05)';
+            btn.style.color = 'var(--success)';
+            btn.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+
+            btn.addEventListener('mouseenter', () => {
+              if (selectedSeat !== seatName) {
+                btn.style.background = 'rgba(16, 185, 129, 0.15)';
+              }
+            });
+            btn.addEventListener('mouseleave', () => {
+              if (selectedSeat !== seatName) {
+                btn.style.background = 'rgba(16, 185, 129, 0.05)';
+              }
+            });
+
+            btn.addEventListener('click', () => {
+              selectSeat(seatName, btn);
+            });
+          }
+          seatsGrid.appendChild(btn);
+        }
+      });
+    });
+  }
+
+  function selectSeat(seatName, btnElement) {
+    // Deselect previous
+    const buttons = seatsGrid.querySelectorAll('button');
+    buttons.forEach(btn => {
+      if (btn.textContent === selectedSeat) {
+        btn.style.background = 'rgba(16, 185, 129, 0.05)';
+        btn.style.color = 'var(--success)';
+        btn.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+      }
+    });
+
+    if (selectedSeat === seatName) {
+      // Toggle off
+      selectedSeat = null;
+      selectedSeatLabel.textContent = 'None';
+      totalPriceLabel.textContent = '৳0';
+      if (confirmBookingBtn) confirmBookingBtn.disabled = true;
+    } else {
+      // Select
+      selectedSeat = seatName;
+      selectedSeatLabel.textContent = seatName;
+      totalPriceLabel.textContent = `৳${selectedBus.fare.toLocaleString()}`;
+      if (confirmBookingBtn) confirmBookingBtn.disabled = false;
+
+      btnElement.style.background = 'var(--accent-gradient)';
+      btnElement.style.color = '#ffffff';
+      btnElement.style.borderColor = 'transparent';
+    }
+  }
+
+  if (closeBookingModalBtn) {
+    closeBookingModalBtn.addEventListener('click', () => {
+      if (bookingModal) bookingModal.style.display = 'none';
+    });
+  }
+
+  if (confirmBookingBtn) {
+    confirmBookingBtn.addEventListener('click', () => {
+      if (!selectedBus || !selectedSeat) return;
+
+      showToast(`🎟️ Ticket booked successfully! Seat: ${selectedSeat} on ${selectedBus.operator}.`, 'success');
+      
+      // Update available seats counter in active list
+      selectedBus.availableSeats--;
+      
+      // Close modal
+      if (bookingModal) bookingModal.style.display = 'none';
+
+      // Re-render current list to update seats count
+      const dateVal = journeyDateInput.value.trim();
+      renderBuses(currentSearchingBuses, fromInput.value, toInput.value, dateVal);
     });
   }
 
