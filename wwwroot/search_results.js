@@ -26,18 +26,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const dateVal = urlParams.get('date') || '';
 
   // API Setup
-  const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
-    ? '' 
-    : 'http://localhost:5080';
+  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
+    : '';
 
   let currentBuses = [];
   let selectedBus = null;
   let selectedSeats = [];
 
-  function getAvailableSeatsCount(bus) {
+  function getBookedSeatsList(bus) {
     const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const cols = ['1', '2', '3', '4'];
+    const allSeats = [];
     
+    let seatIdx = 0;
+    rows.forEach(r => {
+      cols.forEach(c => {
+        seatIdx++;
+        allSeats.push({
+          name: `${r}${c}`,
+          index: seatIdx
+        });
+      });
+    });
+
     const seedStr = `${bus.id}_${dateVal}`;
     let hash = 0;
     for (let i = 0; i < seedStr.length; i++) {
@@ -49,22 +61,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return x - Math.floor(x);
     }
 
-    let seatIdx = 0;
-    let count = 0;
-    rows.forEach(() => {
-      cols.forEach(() => {
-        seatIdx++;
-        const isBooked = seededRandom(seatIdx) < 0.55;
-        if (!isBooked) {
-          count++;
-        }
-      });
+    allSeats.forEach(seat => {
+      seat.score = seededRandom(seat.index);
     });
 
-    if (bus.userBookedSeats) {
-      count -= bus.userBookedSeats.length;
+    allSeats.sort((a, b) => a.score - b.score);
+
+    const dbAvailable = bus.dbAvailableSeats !== undefined ? bus.dbAvailableSeats : bus.availableSeats;
+    const bookedCount = Math.max(0, 40 - dbAvailable);
+    return allSeats.slice(0, bookedCount).map(s => s.name);
+  }
+
+  function getAvailableSeatsCount(bus) {
+    if (bus.dbAvailableSeats === undefined) {
+      bus.dbAvailableSeats = bus.availableSeats;
     }
-    return count;
+    const bookedCount = bus.userBookedSeats ? bus.userBookedSeats.length : 0;
+    return bus.dbAvailableSeats - bookedCount;
   }
 
   if (searchParamsLabel) {
@@ -214,19 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const cols = ['1', '2', '', '3', '4']; // Corridor represents empty space
 
-    // Seed representation using bus id and date
-    const seedStr = `${bus.id}_${dateVal}`;
-    let hash = 0;
-    for (let i = 0; i < seedStr.length; i++) {
-      hash = (hash * 31) + seedStr.charCodeAt(i);
-    }
-
-    function seededRandom(i) {
-      const x = Math.sin(hash + i) * 10000;
-      return x - Math.floor(x);
-    }
-
-    let seatIdx = 0;
+    const bookedSeats = getBookedSeatsList(bus);
     rows.forEach(row => {
       cols.forEach(col => {
         if (col === '') {
@@ -235,15 +236,14 @@ document.addEventListener('DOMContentLoaded', () => {
           space.style.width = '24px';
           seatsGrid.appendChild(space);
         } else {
-          seatIdx++;
           const seatName = `${row}${col}`;
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'seat-btn';
           btn.textContent = seatName;
 
-          // Approx 55% booked dynamically OR booked by current user in this session
-          const isBooked = (seededRandom(seatIdx) < 0.55) || (bus.userBookedSeats && bus.userBookedSeats.includes(seatName));
+          // Booked if in list OR booked by current user in this session
+          const isBooked = bookedSeats.includes(seatName) || (bus.userBookedSeats && bus.userBookedSeats.includes(seatName));
           if (isBooked) {
             btn.style.background = 'rgba(255, 255, 255, 0.04)';
             btn.style.color = 'var(--text-muted)';

@@ -150,9 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
         role: role
       };
 
-      const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
-        ? '' 
-        : 'http://localhost:5080';
+      const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+        ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
+        : '';
 
       fetch(`${apiBase}/api/auth/signup`, {
         method: 'POST',

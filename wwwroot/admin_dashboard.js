@@ -1,3 +1,7 @@
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("JS Error: " + message + " at line " + lineno + ":" + colno);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // --- DOM Elements ---
   const userTableBody = document.getElementById('userTableBody');
@@ -11,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtnText = document.getElementById('submitBtnText');
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const logoutBtn = document.getElementById('logoutBtn');
+  const busTableBody = document.getElementById('busTableBody');
+
   
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
@@ -131,12 +137,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- API Setup ---
-  const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
-    ? '' 
-    : 'http://localhost:5080';
+  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
+    : '';
 
   let currentUser = null;
   let allRegisteredUsers = [];
+  let allBuses = [];
 
   function loadProfile() {
     const email = localStorage.getItem('userEmail');
@@ -192,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nameDisplay) nameDisplay.textContent = 'Error loading profile';
         if (emailDisplay) emailDisplay.textContent = 'Error loading profile';
         if (phoneDisplay) phoneDisplay.textContent = 'Error loading profile';
-        if (permDistrictDisplay) permDistrictDisplay.textContent = 'Error loading profile';
+        if (permAddressDisplay) permAddressDisplay.textContent = 'Error loading profile';
         if (genderDisplay) genderDisplay.textContent = 'Error loading profile';
         if (professionDisplay) professionDisplay.textContent = 'Error loading profile';
         if (dateDisplay) dateDisplay.textContent = 'Error loading profile';
@@ -203,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   loadUsers();
   loadNotices();
+  loadBuses();
 
   // --- Profile Update Dialog ---
   const updateProfileBtn = document.getElementById('updateProfileBtn');
@@ -535,6 +543,128 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUsers(filtered);
     });
   }
+
+  // --- Load and Render Buses ---
+
+  let activeBuses = [];
+  let busCurrentPage = 1;
+  const busPageSize = 50;
+
+  function renderBuses(busesList) {
+    if (!busTableBody) return;
+    busTableBody.innerHTML = '';
+    
+    activeBuses = busesList;
+    const totalBuses = activeBuses.length;
+    const maxPages = Math.max(1, Math.ceil(totalBuses / busPageSize));
+    if (busCurrentPage > maxPages) {
+      busCurrentPage = maxPages;
+    }
+    if (busCurrentPage < 1) {
+      busCurrentPage = 1;
+    }
+
+    if (totalBuses === 0) {
+      busTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No buses found.</td></tr>`;
+      updatePaginationControls(0, 0, 0);
+      return;
+    }
+
+    const startIdx = (busCurrentPage - 1) * busPageSize;
+    const endIdx = Math.min(startIdx + busPageSize, totalBuses);
+    const paginatedBuses = activeBuses.slice(startIdx, endIdx);
+
+    paginatedBuses.forEach(bus => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color: var(--text-primary); font-weight: 500;">${escapeHtml(bus.operator)}</td>
+        <td><span class="role-badge user">${escapeHtml(bus.busType)}</span></td>
+        <td>${escapeHtml(bus.fromDistrict)} ➔ ${escapeHtml(bus.toDistrict)}</td>
+        <td>${escapeHtml(bus.departureTime)}</td>
+        <td>৳${bus.fare.toLocaleString()}</td>
+        <td><span style="color: ${bus.availableSeats < 10 ? 'var(--danger)' : 'var(--success)'}; font-weight: 600;">${bus.availableSeats}</span></td>
+      `;
+      busTableBody.appendChild(tr);
+    });
+
+    updatePaginationControls(startIdx + 1, endIdx, totalBuses);
+  }
+
+  function updatePaginationControls(start, end, total) {
+    const busPaginationInfo = document.getElementById('busPaginationInfo');
+    const busPrevPageBtn = document.getElementById('busPrevPageBtn');
+    const busNextPageBtn = document.getElementById('busNextPageBtn');
+    const busPaginationControls = document.getElementById('busPaginationControls');
+
+    if (!busPaginationControls) return;
+
+    if (total === 0) {
+      if (busPaginationInfo) busPaginationInfo.textContent = 'Showing 0-0 of 0 buses';
+      if (busPrevPageBtn) busPrevPageBtn.disabled = true;
+      if (busNextPageBtn) busNextPageBtn.disabled = true;
+      return;
+    }
+
+    if (busPaginationInfo) {
+      busPaginationInfo.textContent = `Showing ${start}-${end} of ${total.toLocaleString()} buses`;
+    }
+
+    const maxPages = Math.ceil(total / busPageSize);
+
+    if (busPrevPageBtn) {
+      busPrevPageBtn.disabled = (busCurrentPage === 1);
+      busPrevPageBtn.style.opacity = (busCurrentPage === 1) ? '0.4' : '1';
+      busPrevPageBtn.style.cursor = (busCurrentPage === 1) ? 'not-allowed' : 'pointer';
+    }
+
+    if (busNextPageBtn) {
+      busNextPageBtn.disabled = (busCurrentPage === maxPages);
+      busNextPageBtn.style.opacity = (busCurrentPage === maxPages) ? '0.4' : '1';
+      busNextPageBtn.style.cursor = (busCurrentPage === maxPages) ? 'not-allowed' : 'pointer';
+    }
+  }
+
+  // Set up pagination button event listeners
+  const busPrevPageBtn = document.getElementById('busPrevPageBtn');
+  const busNextPageBtn = document.getElementById('busNextPageBtn');
+
+  if (busPrevPageBtn) {
+    busPrevPageBtn.addEventListener('click', () => {
+      if (busCurrentPage > 1) {
+        busCurrentPage--;
+        renderBuses(activeBuses);
+      }
+    });
+  }
+
+  if (busNextPageBtn) {
+    busNextPageBtn.addEventListener('click', () => {
+      const maxPages = Math.ceil(activeBuses.length / busPageSize);
+      if (busCurrentPage < maxPages) {
+        busCurrentPage++;
+        renderBuses(activeBuses);
+      }
+    });
+  }
+
+  function loadBuses() {
+    if (!busTableBody) return;
+    fetch(`${apiBase}/api/bus`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load buses from database.');
+        return response.json();
+      })
+      .then(buses => {
+        allBuses = buses;
+        busCurrentPage = 1;
+        renderBuses(buses);
+      })
+      .catch(error => {
+        console.error(error);
+        busTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">❌ Error loading bus database: ${error.message}</td></tr>`;
+      });
+  }
+
 
   // --- Load Notice Board List ---
   function loadNotices() {

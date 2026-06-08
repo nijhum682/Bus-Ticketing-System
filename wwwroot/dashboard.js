@@ -32,9 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- API Setup & Fetch Profile ---
-  const apiBase = (window.location.host === 'localhost:5080' || window.location.host === '127.0.0.1:5080') 
-    ? '' 
-    : 'http://localhost:5080';
+  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
+    : '';
 
   let currentUser = null;
 
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nameDisplay) nameDisplay.textContent = 'Error loading profile';
         if (emailDisplay) emailDisplay.textContent = 'Error loading profile';
         if (phoneDisplay) phoneDisplay.textContent = 'Error loading profile';
-        if (permDistrictDisplay) permDistrictDisplay.textContent = 'Error loading profile';
+        if (permAddressDisplay) permAddressDisplay.textContent = 'Error loading profile';
         if (genderDisplay) genderDisplay.textContent = 'Error loading profile';
         if (professionDisplay) professionDisplay.textContent = 'Error loading profile';
         if (dateDisplay) dateDisplay.textContent = 'Error loading profile';

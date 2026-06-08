@@ -85,7 +85,6 @@ namespace BusTicketingBackend.Controllers
                 // Determine bus type
                 string busType;
                 int typeRand = rand.Next(100);
-                int fareModifier = 0;
                 if (typeRand < 40)
                 {
                     busType = "Non-AC";
@@ -93,30 +92,39 @@ namespace BusTicketingBackend.Controllers
                 else if (typeRand < 80)
                 {
                     busType = "AC";
-                    fareModifier = rand.Next(400, 700);
                 }
                 else
                 {
                     busType = "Sleeper Class";
-                    fareModifier = rand.Next(900, 1400);
                 }
 
                 generatedBuses.Add(new Bus
                 {
-                    Id = -(i + 1), // Negative ID to signify transient/generated
                     Operator = op,
                     BusType = busType,
                     DepartureTime = time,
-                    Fare = baseFare + fareModifier,
+                    Fare = GeoUtils.CalculateFare(from, to, busType),
                     AvailableSeats = rand.Next(4, 38),
                     FromDistrict = from,
                     ToDistrict = to
                 });
             }
 
+            _context.Buses.AddRange(generatedBuses);
+            await _context.SaveChangesAsync();
+
             // Sort by departure time for cleaner presentation
             var sortedBuses = generatedBuses.OrderBy(b => b.DepartureTime).ToList();
             return Ok(sortedBuses);
+        }
+
+        // GET: api/bus
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Bus>>> GetBuses()
+        {
+            return await _context.Buses
+                .OrderBy(b => b.Operator)
+                .ToListAsync();
         }
 
         private string StandardizeLocation(string val)

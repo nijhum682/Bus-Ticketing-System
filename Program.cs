@@ -141,42 +141,105 @@ using (var scope = app.Services.CreateScope())
             );
         ");
 
-        // 5. Seed default buses if empty
-        var anyBuses = await context.Buses.AnyAsync();
-        if (!anyBuses)
+        try
         {
-            context.Buses.AddRange(new[]
+            await context.Database.ExecuteSqlRawAsync("CREATE INDEX `IX_Buses_FromDistrict_ToDistrict` ON `Buses` (`FromDistrict`, `ToDistrict`);");
+        }
+        catch (Exception) { }
+
+        // 5. Seed default buses if empty, incomplete, or if fares need updating to distance-based calculations
+        var busCount = await context.Buses.CountAsync();
+        var firstBus = await context.Buses.FirstOrDefaultAsync();
+        var needsReseed = firstBus == null || firstBus.Fare != BusTicketingBackend.Models.GeoUtils.CalculateFare(firstBus.FromDistrict, firstBus.ToDistrict, firstBus.BusType);
+        if (busCount < 16100 || needsReseed)
+        {
+            // Clear existing ones to prevent duplicates
+            await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE `Buses`;");
+
+            var districts = new[]
             {
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "AC", DepartureTime = "09:30 AM", Fare = 1500, AvailableSeats = 24, FromDistrict = "Dhaka", ToDistrict = "Chattogram" },
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "Non-AC", DepartureTime = "08:00 AM", Fare = 800, AvailableSeats = 32, FromDistrict = "Dhaka", ToDistrict = "Chattogram" },
-                new BusTicketingBackend.Models.Bus { Operator = "Shyamoli Paribahan", BusType = "Non-AC", DepartureTime = "11:00 AM", Fare = 800, AvailableSeats = 28, FromDistrict = "Dhaka", ToDistrict = "Chattogram" },
-                new BusTicketingBackend.Models.Bus { Operator = "Ena Transport", BusType = "AC", DepartureTime = "02:30 PM", Fare = 1400, AvailableSeats = 18, FromDistrict = "Dhaka", ToDistrict = "Chattogram" },
+                "Bagerhat", "Bandarban", "Barguna", "Barishal", "Bhola", "Bogura", "Brahmanbaria", 
+                "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Cox's Bazar", "Cumilla", 
+                "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj", 
+                "Habiganj", "Jamalpur", "Jashore", "Jhalokathi", "Jhenaidah", "Joypurhat", 
+                "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lalmonirhat", 
+                "Laxmipur", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar", 
+                "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi", 
+                "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh", 
+                "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur", 
+                "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet", 
+                "Tangail", "Thakurgaon"
+            };
 
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "Sleeper Class", DepartureTime = "10:00 PM", Fare = 2500, AvailableSeats = 12, FromDistrict = "Dhaka", ToDistrict = "Cox's Bazar" },
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "AC", DepartureTime = "10:30 PM", Fare = 1800, AvailableSeats = 20, FromDistrict = "Dhaka", ToDistrict = "Cox's Bazar" },
-                new BusTicketingBackend.Models.Bus { Operator = "Saintmartin Travels", BusType = "AC", DepartureTime = "11:00 PM", Fare = 1600, AvailableSeats = 22, FromDistrict = "Dhaka", ToDistrict = "Cox's Bazar" },
+            var operators = new[] { "Green Line", "Hanif Enterprise", "Shyamoli Paribahan", "Ena Transport", "Sohogh Paribahan", "SR Travels", "Nabil Paribahan", "Saintmartin Travels" };
+            var times = new[] { "07:30 AM", "09:00 AM", "11:15 AM", "02:30 PM", "04:45 PM", "08:15 PM", "10:00 PM", "11:15 PM" };
+            var generatedBuses = new List<BusTicketingBackend.Models.Bus>();
 
-                new BusTicketingBackend.Models.Bus { Operator = "Ena Transport", BusType = "Non-AC", DepartureTime = "07:00 AM", Fare = 600, AvailableSeats = 35, FromDistrict = "Dhaka", ToDistrict = "Sylhet" },
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "AC", DepartureTime = "08:30 AM", Fare = 1200, AvailableSeats = 26, FromDistrict = "Dhaka", ToDistrict = "Sylhet" },
-                new BusTicketingBackend.Models.Bus { Operator = "Shyamoli Paribahan", BusType = "Non-AC", DepartureTime = "01:30 PM", Fare = 600, AvailableSeats = 30, FromDistrict = "Dhaka", ToDistrict = "Sylhet" },
+            var rand = new Random(42); // Seeded Random for determinism
+            
+            for (int i = 0; i < districts.Length; i++)
+            {
+                for (int j = 0; j < districts.Length; j++)
+                {
+                    if (i == j) continue;
 
-                new BusTicketingBackend.Models.Bus { Operator = "National Travels", BusType = "AC", DepartureTime = "09:00 AM", Fare = 1000, AvailableSeats = 24, FromDistrict = "Dhaka", ToDistrict = "Rajshahi" },
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "Non-AC", DepartureTime = "02:00 PM", Fare = 700, AvailableSeats = 36, FromDistrict = "Dhaka", ToDistrict = "Rajshahi" },
+                    var from = districts[i];
+                    var to = districts[j];
 
-                new BusTicketingBackend.Models.Bus { Operator = "Sohogh Paribahan", BusType = "AC", DepartureTime = "08:00 AM", Fare = 1300, AvailableSeats = 15, FromDistrict = "Dhaka", ToDistrict = "Khulna" },
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "Non-AC", DepartureTime = "10:00 AM", Fare = 800, AvailableSeats = 34, FromDistrict = "Dhaka", ToDistrict = "Khulna" },
+                    int busCountPerRoute = 4; // Exactly 4 buses per route
+                    var usedOperators = new HashSet<string>();
+                    var usedTimes = new HashSet<string>();
 
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "Non-AC", DepartureTime = "08:00 AM", Fare = 800, AvailableSeats = 30, FromDistrict = "Chattogram", ToDistrict = "Dhaka" },
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "AC", DepartureTime = "09:30 AM", Fare = 1500, AvailableSeats = 22, FromDistrict = "Chattogram", ToDistrict = "Dhaka" },
+                    for (int b = 0; b < busCountPerRoute; b++)
+                    {
+                        // Select unique operator
+                        string op;
+                        int opAttempts = 0;
+                        do
+                        {
+                            op = operators[rand.Next(operators.Length)];
+                            opAttempts++;
+                        } while (usedOperators.Contains(op) && opAttempts < 15);
+                        usedOperators.Add(op);
 
-                new BusTicketingBackend.Models.Bus { Operator = "Ena Transport", BusType = "Non-AC", DepartureTime = "07:00 AM", Fare = 600, AvailableSeats = 31, FromDistrict = "Sylhet", ToDistrict = "Dhaka" },
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "AC", DepartureTime = "08:30 AM", Fare = 1200, AvailableSeats = 25, FromDistrict = "Sylhet", ToDistrict = "Dhaka" },
+                        // Select unique time
+                        string time;
+                        int timeAttempts = 0;
+                        do
+                        {
+                            time = times[rand.Next(times.Length)];
+                            timeAttempts++;
+                        } while (usedTimes.Contains(time) && timeAttempts < 15);
+                        usedTimes.Add(time);
 
-                new BusTicketingBackend.Models.Bus { Operator = "Green Line", BusType = "Sleeper Class", DepartureTime = "10:00 PM", Fare = 2500, AvailableSeats = 14, FromDistrict = "Cox's Bazar", ToDistrict = "Dhaka" },
-                new BusTicketingBackend.Models.Bus { Operator = "Hanif Enterprise", BusType = "AC", DepartureTime = "10:30 PM", Fare = 1800, AvailableSeats = 19, FromDistrict = "Cox's Bazar", ToDistrict = "Dhaka" }
-            });
-            await context.SaveChangesAsync();
-            Console.WriteLine("Seeded default buses in Buses database table.");
+                        var busType = b == 0 ? (rand.Next(10) < 6 ? "AC" : "Sleeper Class") : "Non-AC";
+                        int fare = BusTicketingBackend.Models.GeoUtils.CalculateFare(from, to, busType);
+
+                        generatedBuses.Add(new BusTicketingBackend.Models.Bus
+                        {
+                            Operator = op,
+                            BusType = busType,
+                            DepartureTime = time,
+                            Fare = fare,
+                            AvailableSeats = rand.Next(5, 38),
+                            FromDistrict = from,
+                            ToDistrict = to
+                        });
+                    }
+                }
+            }
+
+            // Save in batches of 2000 to prevent connection issues or packet size limits
+            const int batchSize = 2000;
+            for (int k = 0; k < generatedBuses.Count; k += batchSize)
+            {
+                var batch = generatedBuses.Skip(k).Take(batchSize).ToList();
+                context.Buses.AddRange(batch);
+                await context.SaveChangesAsync();
+                context.ChangeTracker.Clear(); // Clear tracking to free memory and prevent ID conflict on subsequent batches
+            }
+
+            Console.WriteLine($"Seeded {generatedBuses.Count} default buses in Buses database table.");
         }
     }
     catch (Exception ex)
