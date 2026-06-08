@@ -4,8 +4,8 @@
   /* Colors */
   --bg-primary: #070a13;
   --bg-secondary: #0d1224;
-  --bg-card: rgba(20, 27, 47, 0.65);
-  --bg-card-hover: rgba(29, 38, 64, 0.85);
+  --bg-card: rgba(20, 27, 47, 0.15);
+  --bg-card-hover: rgba(29, 38, 64, 0.25);
   --border-color: rgba(255, 255, 255, 0.07);
   --border-color-active: rgba(99, 102, 241, 0.4);
   
@@ -647,7 +647,7 @@ body::after {
 .signup-form .form-input {
   width: 100%;
   height: 52px;
-  background: rgba(13, 18, 36, 0.7);
+  background: rgba(13, 18, 36, 0.3);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   padding: 0 1.25rem;
@@ -667,7 +667,7 @@ body::after {
 }
 
 .signup-form .form-input:focus {
-  background: rgba(20, 27, 47, 0.9);
+  background: rgba(20, 27, 47, 0.45);
   border-color: var(--border-color-active);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -1383,18 +1383,41 @@ html:has(.signin-page), html:has(.signup-page), html:has(.index-page) {
 .dashboard-page .signup-card:hover { background: none !important; box-shadow: none !important; }
 
 .dashboard-page .form-address-group {
-  background: rgba(7,10,19,0.25) !important;
+  background: rgba(7, 10, 19, 0.08) !important;
   backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important;
-  border: none !important;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.55), inset 0 0 1px rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35), inset 0 0 1px rgba(255, 255, 255, 0.08) !important;
   border-radius: var(--border-radius-lg) !important;
   padding: 2.25rem 2rem !important; margin-bottom: 1rem !important;
   transition: var(--transition-normal) !important;
 }
 
 .dashboard-page .form-address-group:hover {
-  background: rgba(7,10,19,0.3) !important;
-  box-shadow: 0 30px 70px rgba(0,0,0,0.65), 0 0 50px rgba(6,182,212,0.05) !important;
+  background: rgba(7, 10, 19, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45), 0 0 50px rgba(6, 182, 212, 0.05) !important;
+}
+
+/* Dashboard inner inputs/textboxes transparency overrides */
+.dashboard-page .form-input,
+.dashboard-page select,
+.dashboard-page textarea,
+.dashboard-page .admin-search-input,
+.dashboard-page .searchable-select-dropdown,
+.dashboard-page .table-container,
+.dashboard-page .admin-notice-list,
+.dashboard-page #noticesContainer,
+.dashboard-page #adminNoticesContainer,
+.dashboard-page .booking-grid-container,
+.dashboard-page #noticeForm {
+  background: rgba(13, 18, 36, 0.08) !important;
+}
+
+.dashboard-page .form-input:focus,
+.dashboard-page select:focus,
+.dashboard-page textarea:focus,
+.dashboard-page .admin-search-input:focus {
+  background: rgba(20, 27, 47, 0.18) !important;
 }
 
 .dashboard-page .signup-actions {
@@ -1484,7 +1507,7 @@ html:has(.signin-page), html:has(.signup-page), html:has(.index-page) {
 }
 
 .modal-card {
-  background: rgba(13, 18, 36, 0.9) !important;
+  background: rgba(13, 18, 36, 0.75) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;

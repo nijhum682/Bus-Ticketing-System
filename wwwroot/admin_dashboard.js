@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (totalBuses === 0) {
-      busTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No buses found.</td></tr>`;
+      busTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No buses found.</td></tr>`;
       updatePaginationControls(0, 0, 0);
       return;
     }
@@ -583,6 +583,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${escapeHtml(bus.departureTime)}</td>
         <td>৳${bus.fare.toLocaleString()}</td>
         <td><span style="color: ${bus.availableSeats < 10 ? 'var(--danger)' : 'var(--success)'}; font-weight: 600;">${bus.availableSeats}</span></td>
+        <td style="text-align: center; white-space: nowrap;">
+          <button class="edit-bus-row-btn action-btn btn-secondary" data-id="${bus.id}" style="display: inline-flex; padding: 0.35rem 0.65rem; border-radius: 4px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: 1px solid rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.05); color: var(--accent-secondary); transition: all 0.2s; margin-right: 0.35rem; width: auto; height: auto; justify-content: center; line-height: 1;">Edit</button>
+          <button class="delete-bus-row-btn action-btn btn-secondary" data-id="${bus.id}" style="display: inline-flex; padding: 0.35rem 0.65rem; border-radius: 4px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); color: var(--danger); transition: all 0.2s; width: auto; height: auto; justify-content: center; line-height: 1;">Delete</button>
+        </td>
       `;
       busTableBody.appendChild(tr);
     });
@@ -664,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(error => {
         console.error(error);
-        busTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">❌ Error loading bus database: ${error.message}</td></tr>`;
+        busTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger);">❌ Error loading bus database: ${error.message}</td></tr>`;
       });
   }
 
@@ -1184,6 +1188,464 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(error => {
         showToast(`❌ Error: ${error.message}`, 'danger');
+      });
+    });
+  }
+
+  // --- Admin Bus CRUD Modal and Actions ---
+  const adminBusModal = document.getElementById('adminBusModal');
+  const adminBusForm = document.getElementById('adminBusForm');
+  const addBusBtn = document.getElementById('addBusBtn');
+  const closeAdminBusModalBtn = document.getElementById('closeAdminBusModalBtn');
+  const busIdInput = document.getElementById('busIdInput');
+  const busOperatorInput = document.getElementById('busOperatorInput');
+  const busTypeInput = document.getElementById('busTypeInput');
+  const busFromDistrictInput = document.getElementById('busFromDistrictInput');
+  const busToDistrictInput = document.getElementById('busToDistrictInput');
+  const busDepartureTimeInput = document.getElementById('busDepartureTimeInput');
+  const busAvailableSeatsInput = document.getElementById('busAvailableSeatsInput');
+  const busFareInput = document.getElementById('busFareInput');
+  const busModalTitleText = document.getElementById('busModalTitleText');
+
+  // Populate From/To dropdowns
+  if (busFromDistrictInput && busToDistrictInput) {
+    busFromDistrictInput.innerHTML = '<option value="" disabled selected>Select district</option>';
+    busToDistrictInput.innerHTML = '<option value="" disabled selected>Select district</option>';
+    districts.forEach(d => {
+      const opt1 = document.createElement('option');
+      opt1.value = d;
+      opt1.textContent = d;
+      busFromDistrictInput.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = d;
+      opt2.textContent = d;
+      busToDistrictInput.appendChild(opt2);
+    });
+  }
+
+  // Coordinate map for all 64 districts in Bangladesh
+  const districtCoords = {
+    "Bagerhat": [22.6517, 89.7859],
+    "Bandarban": [22.1953, 92.2184],
+    "Barguna": [22.0953, 90.1121],
+    "Barishal": [22.7010, 90.3535],
+    "Bhola": [22.6859, 90.6482],
+    "Bogura": [24.8465, 89.3778],
+    "Brahmanbaria": [23.9575, 91.1158],
+    "Chandpur": [23.2323, 90.6550],
+    "Chapainawabganj": [24.5965, 88.2775],
+    "Chattogram": [22.3569, 91.7832],
+    "Chuadanga": [23.6402, 88.8418],
+    "Cox's Bazar": [21.4272, 92.0058],
+    "Cumilla": [23.4607, 91.1809],
+    "Dhaka": [23.8103, 90.4125],
+    "Dinajpur": [25.6279, 88.6332],
+    "Faridpur": [23.5424, 89.6309],
+    "Feni": [23.0159, 91.3976],
+    "Gaibandha": [25.3297, 89.5430],
+    "Gazipur": [24.0958, 90.4125],
+    "Gopalganj": [23.0051, 89.8262],
+    "Habiganj": [24.3749, 91.4110],
+    "Jamalpur": [24.9376, 89.9377],
+    "Jashore": [23.1633, 89.2182],
+    "Jhalokathi": [22.6432, 90.1983],
+    "Jhenaidah": [23.5450, 89.1725],
+    "Joypurhat": [25.0947, 89.0945],
+    "Khagrachhari": [23.1333, 91.9833],
+    "Khulna": [22.8456, 89.5403],
+    "Kishoreganj": [24.4260, 90.9821],
+    "Kurigram": [25.8072, 89.6295],
+    "Kushtia": [23.9038, 89.1226],
+    "Lalmonirhat": [25.9923, 89.2847],
+    "Laxmipur": [22.9463, 90.8286],
+    "Madaripur": [23.2393, 90.1870],
+    "Magura": [23.4873, 89.4187],
+    "Manikganj": [23.8617, 90.0003],
+    "Meherpur": [23.7712, 88.6366],
+    "Moulvibazar": [24.4829, 91.7773],
+    "Munshiganj": [23.4981, 90.4127],
+    "Mymensingh": [24.7434, 90.3984],
+    "Naogaon": [24.9132, 88.7531],
+    "Narail": [23.1678, 89.5074],
+    "Narayanganj": [23.6226, 90.4998],
+    "Narsingdi": [24.1344, 90.7860],
+    "Natore": [24.4102, 89.0076],
+    "Netrokona": [24.8709, 90.7279],
+    "Nilphamari": [25.8483, 88.9414],
+    "Noakhali": [22.8222, 91.0970],
+    "Pabna": [24.0113, 89.2562],
+    "Panchagarh": [26.2709, 88.5952],
+    "Patuakhali": [22.3593, 90.3299],
+    "Pirojpur": [22.5786, 89.9824],
+    "Rajbari": [23.7151, 89.5875],
+    "Rajshahi": [24.3636, 88.6241],
+    "Rangamati": [22.6556, 92.1754],
+    "Rangpur": [25.7439, 89.2752],
+    "Satkhira": [22.7185, 89.0705],
+    "Shariatpur": [23.2423, 90.4348],
+    "Sherpur": [25.0746, 90.1495],
+    "Sirajganj": [24.3141, 89.5700],
+    "Sunamganj": [25.0711, 91.4013],
+    "Sylhet": [24.8949, 91.8687],
+    "Tangail": [24.2450, 89.9113],
+    "Thakurgaon": [26.0418, 88.4283]
+  };
+
+  // Client-side Haversine formula calculation
+  function calculateClientFare(from, to, busType) {
+    const c1 = districtCoords[from];
+    const c2 = districtCoords[to];
+    if (!c1 || !c2) return 200;
+
+    const R = 6371; // km
+    const dLat = (c2[0] - c1[0]) * Math.PI / 180;
+    const dLon = (c2[1] - c1[1]) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(c1[0] * Math.PI / 180) * Math.cos(c2[0] * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const straightLineDistance = R * c;
+    const roadDistance = straightLineDistance * 1.3;
+
+    let ratePerKm = 2.1;
+    let minFare = 50;
+    if (busType === 'AC') {
+      ratePerKm = 3.8;
+      minFare = 100;
+    } else if (busType === 'Sleeper Class') {
+      ratePerKm = 5.5;
+      minFare = 200;
+    }
+
+    const fare = Math.max(minFare, roadDistance * ratePerKm);
+    return Math.round(fare / 10) * 10;
+  }
+
+  // Auto fare calculation trigger
+  function triggerAutoFare() {
+    const from = busFromDistrictInput ? busFromDistrictInput.value : '';
+    const to = busToDistrictInput ? busToDistrictInput.value : '';
+    const type = busTypeInput ? busTypeInput.value : '';
+    if (from && to && type && from !== to) {
+      const calculated = calculateClientFare(from, to, type);
+      if (busFareInput) {
+        busFareInput.value = calculated;
+      }
+    }
+  }
+
+  if (busFromDistrictInput) busFromDistrictInput.addEventListener('change', triggerAutoFare);
+  if (busToDistrictInput) busToDistrictInput.addEventListener('change', triggerAutoFare);
+  if (busTypeInput) busTypeInput.addEventListener('change', triggerAutoFare);
+
+  // --- Admin Bus Visual Seat Plan Logic ---
+  const adminSeatPlanWrapper = document.getElementById('adminSeatPlanWrapper');
+  const adminSeatGrid = document.getElementById('adminSeatGrid');
+  let currentAvailableSeatsList = [];
+
+  function getSortedSeatsList(busId) {
+    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    const cols = ['1', '2', '3', '4'];
+    const allSeats = [];
+    
+    let seatIdx = 0;
+    rows.forEach(r => {
+      cols.forEach(c => {
+        seatIdx++;
+        allSeats.push({
+          name: `${r}${c}`,
+          index: seatIdx
+        });
+      });
+    });
+
+    const seedStr = `${busId || 0}_2026-06-09`;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      hash = (hash * 31) + seedStr.charCodeAt(i);
+    }
+
+    function seededRandom(i) {
+      const x = Math.sin(hash + i) * 10000;
+      return x - Math.floor(x);
+    }
+
+    allSeats.forEach(seat => {
+      seat.score = seededRandom(seat.index);
+    });
+
+    allSeats.sort((a, b) => a.score - b.score);
+    return allSeats;
+  }
+
+  function initAdminSeatPlan() {
+    if (!seatPlanInitialized) {
+      const busId = busIdInput ? parseInt(busIdInput.value, 10) : 0;
+      const bus = allBuses.find(b => b.id === busId);
+      
+      const allSeats = ['A1','A2','A3','A4','B1','B2','B3','B4','C1','C2','C3','C4','D1','D2','D3','D4','E1','E2','E3','E4','F1','F2','F3','F4','G1','G2','G3','G4','H1','H2','H3','H4','I1','I2','I3','I4','J1','J2','J3','J4'];
+
+      if (bus && bus.bookedSeats !== undefined && bus.bookedSeats !== null && bus.bookedSeats.trim() !== '') {
+        const booked = bus.bookedSeats.split(',').map(s => s.trim()).filter(Boolean);
+        currentAvailableSeatsList = allSeats.filter(s => !booked.includes(s));
+      } else {
+        let val = parseInt(busAvailableSeatsInput.value, 10);
+        if (isNaN(val)) val = 40;
+        if (val < 0) val = 0;
+        if (val > 40) val = 40;
+
+        const sorted = getSortedSeatsList(busId);
+        const bookedCount = 40 - val;
+        currentAvailableSeatsList = sorted.slice(bookedCount).map(s => s.name);
+      }
+      seatPlanInitialized = true;
+    }
+    
+    drawAdminSeatGrid();
+  }
+
+  function drawAdminSeatGrid() {
+    if (!adminSeatGrid) return;
+    adminSeatGrid.innerHTML = '';
+
+    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    const cols = ['1', '2', '', '3', '4'];
+
+    rows.forEach(row => {
+      cols.forEach(col => {
+        if (col === '') {
+          const space = document.createElement('div');
+          space.style.width = '24px';
+          adminSeatGrid.appendChild(space);
+        } else {
+          const seatName = `${row}${col}`;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'admin-seat-btn';
+          btn.textContent = seatName;
+
+          const isAvailable = currentAvailableSeatsList.includes(seatName);
+          if (isAvailable) {
+            btn.style.background = 'var(--accent-gradient)';
+            btn.style.color = '#ffffff';
+            btn.style.borderColor = 'transparent';
+            btn.style.boxShadow = '0 0 8px var(--accent-glow)';
+          } else {
+            btn.style.background = 'rgba(255, 255, 255, 0.04)';
+            btn.style.color = 'var(--text-muted)';
+            btn.style.borderColor = 'rgba(255, 255, 255, 0.02)';
+          }
+
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentAvailableSeatsList.includes(seatName)) {
+              currentAvailableSeatsList = currentAvailableSeatsList.filter(s => s !== seatName);
+            } else {
+              currentAvailableSeatsList.push(seatName);
+            }
+            busAvailableSeatsInput.value = currentAvailableSeatsList.length;
+            drawAdminSeatGrid();
+            busAvailableSeatsInput.focus();
+          });
+
+          adminSeatGrid.appendChild(btn);
+        }
+      });
+    });
+  }
+
+  if (busAvailableSeatsInput) {
+    busAvailableSeatsInput.addEventListener('focus', () => {
+      if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'block';
+      initAdminSeatPlan();
+    });
+    busAvailableSeatsInput.addEventListener('click', () => {
+      if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'block';
+      initAdminSeatPlan();
+    });
+  }
+
+  // Close admin seat plan if clicking outside the input and wrapper
+  document.addEventListener('click', (e) => {
+    if (adminSeatPlanWrapper && adminSeatPlanWrapper.style.display === 'block') {
+      if (!adminSeatPlanWrapper.contains(e.target) && e.target !== busAvailableSeatsInput) {
+        adminSeatPlanWrapper.style.display = 'none';
+      }
+    }
+  });
+
+  // Close admin seat plan when focus moves to another field (Tab navigation support)
+  document.addEventListener('focusin', (e) => {
+    if (adminSeatPlanWrapper && adminSeatPlanWrapper.style.display === 'block') {
+      if (e.target !== busAvailableSeatsInput && !adminSeatPlanWrapper.contains(e.target)) {
+        adminSeatPlanWrapper.style.display = 'none';
+      }
+    }
+  });
+
+  // Open modal in Add mode
+  if (addBusBtn) {
+    addBusBtn.addEventListener('click', () => {
+      if (busIdInput) busIdInput.value = '';
+      if (busOperatorInput) busOperatorInput.value = '';
+      if (busTypeInput) busTypeInput.value = 'Non-AC';
+      if (busFromDistrictInput) busFromDistrictInput.value = '';
+      if (busToDistrictInput) busToDistrictInput.value = '';
+      if (busDepartureTimeInput) busDepartureTimeInput.value = '';
+      if (busAvailableSeatsInput) busAvailableSeatsInput.value = '40';
+      if (busFareInput) busFareInput.value = '';
+      if (busModalTitleText) busModalTitleText.textContent = 'Add New Bus';
+      if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'none';
+      seatPlanInitialized = false;
+      if (adminBusModal) adminBusModal.style.display = 'flex';
+    });
+  }
+
+  // Close modal
+  if (closeAdminBusModalBtn && adminBusModal) {
+    closeAdminBusModalBtn.addEventListener('click', () => {
+      adminBusModal.style.display = 'none';
+    });
+  }
+
+  // Click delegation for Edit/Delete bus buttons
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('edit-bus-row-btn')) {
+      const busId = parseInt(e.target.getAttribute('data-id'), 10);
+      const bus = allBuses.find(b => b.id === busId);
+      if (!bus) return;
+
+      if (busIdInput) busIdInput.value = bus.id;
+      if (busOperatorInput) busOperatorInput.value = bus.operator || '';
+      if (busTypeInput) busTypeInput.value = bus.busType || 'Non-AC';
+      if (busFromDistrictInput) busFromDistrictInput.value = bus.fromDistrict || '';
+      if (busToDistrictInput) busToDistrictInput.value = bus.toDistrict || '';
+      if (busDepartureTimeInput) busDepartureTimeInput.value = bus.departureTime || '';
+      if (busAvailableSeatsInput) busAvailableSeatsInput.value = bus.availableSeats;
+      if (busFareInput) busFareInput.value = bus.fare;
+      if (busModalTitleText) busModalTitleText.textContent = 'Edit Bus Info';
+      if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'none';
+      seatPlanInitialized = false;
+      if (adminBusModal) adminBusModal.style.display = 'flex';
+    }
+
+    if (e.target.classList.contains('delete-bus-row-btn')) {
+      const busId = parseInt(e.target.getAttribute('data-id'), 10);
+      const bus = allBuses.find(b => b.id === busId);
+      if (!bus) return;
+
+      if (confirm(`Are you sure you want to delete this bus: "${bus.operator}" (${bus.fromDistrict} ➔ ${bus.toDistrict})?`)) {
+        fetch(`${apiBase}/api/bus/${busId}`, {
+          method: 'DELETE'
+        })
+        .then(async response => {
+          const isJson = response.headers.get('content-type')?.includes('application/json');
+          const data = isJson ? await response.json() : null;
+          if (response.ok) {
+            return data;
+          } else {
+            const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+            throw new Error(errMsg);
+          }
+        })
+        .then(() => {
+          showToast(`🎉 Bus deleted successfully.`, 'success');
+          loadBuses();
+        })
+        .catch(error => {
+          showToast(`❌ Error deleting bus: ${error.message}`, 'danger');
+        });
+      }
+    }
+  });
+
+  // Handle bus form submission
+  if (adminBusForm) {
+    adminBusForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const id = busIdInput ? busIdInput.value : '';
+      const operator = busOperatorInput ? busOperatorInput.value.trim() : '';
+      const busType = busTypeInput ? busTypeInput.value : '';
+      const fromDistrict = busFromDistrictInput ? busFromDistrictInput.value : '';
+      const toDistrict = busToDistrictInput ? busToDistrictInput.value : '';
+      const departureTime = busDepartureTimeInput ? busDepartureTimeInput.value.trim() : '';
+      const availableSeats = busAvailableSeatsInput ? parseInt(busAvailableSeatsInput.value, 10) : 40;
+      const fare = busFareInput ? parseInt(busFareInput.value, 10) : 0;
+
+      if (!operator || !busType || !fromDistrict || !toDistrict || !departureTime || isNaN(availableSeats) || isNaN(fare)) {
+        showToast('⚠️ Please fill out all required fields.', 'warning');
+        return;
+      }
+
+      if (fromDistrict === toDistrict) {
+        showToast('⚠️ From and To districts cannot be the same.', 'warning');
+        return;
+      }
+
+      if (availableSeats < 0 || availableSeats > 40) {
+        showToast('⚠️ Available seats must be between 0 and 40.', 'warning');
+        return;
+      }
+
+      if (fare <= 0) {
+        showToast('⚠️ Fare must be a positive amount.', 'warning');
+        return;
+      }
+
+      let bookedSeats = '';
+      if (seatPlanInitialized) {
+        const allSeats = ['A1','A2','A3','A4','B1','B2','B3','B4','C1','C2','C3','C4','D1','D2','D3','D4','E1','E2','E3','E4','F1','F2','F3','F4','G1','G2','G3','G4','H1','H2','H3','H4','I1','I2','I3','I4','J1','J2','J3','J4'];
+        const bookedSeatsList = allSeats.filter(s => !currentAvailableSeatsList.includes(s));
+        bookedSeats = bookedSeatsList.join(', ');
+      } else if (id) {
+        const bus = allBuses.find(b => b.id === parseInt(id, 10));
+        bookedSeats = bus ? (bus.bookedSeats || '') : '';
+      }
+
+      const busData = {
+        operator,
+        busType,
+        fromDistrict,
+        toDistrict,
+        departureTime,
+        availableSeats,
+        fare,
+        bookedSeats
+      };
+
+      if (id) {
+        busData.id = parseInt(id, 10);
+      }
+
+      const url = id ? `${apiBase}/api/bus/${id}` : `${apiBase}/api/bus`;
+      const method = id ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(busData)
+      })
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
+        if (response.ok) {
+          return data;
+        } else {
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
+        }
+      })
+      .then(data => {
+        showToast(id ? '🎉 Bus updated successfully!' : '🎉 Bus created successfully!', 'success');
+        if (adminBusModal) adminBusModal.style.display = 'none';
+        loadBuses();
+      })
+      .catch(error => {
+        showToast(`❌ Error saving bus: ${error.message}`, 'danger');
       });
     });
   }

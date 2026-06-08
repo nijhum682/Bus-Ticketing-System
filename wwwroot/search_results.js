@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'bus-listing-card';
       
       // Setup styles matching target image
-      card.style.background = 'rgba(20, 27, 47, 0.45)';
+      card.style.background = 'rgba(20, 27, 47, 0.08)';
       card.style.backdropFilter = 'blur(10px)';
       card.style.webkitBackdropFilter = 'blur(10px)';
       card.style.border = '1px solid var(--border-color)';
@@ -163,11 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Hover effect
       card.addEventListener('mouseenter', () => {
         card.style.borderColor = 'var(--border-color-active)';
-        card.style.background = 'rgba(29, 38, 64, 0.75)';
+        card.style.background = 'rgba(29, 38, 64, 0.15)';
       });
       card.addEventListener('mouseleave', () => {
         card.style.borderColor = 'var(--border-color)';
-        card.style.background = 'rgba(20, 27, 47, 0.45)';
+        card.style.background = 'rgba(20, 27, 47, 0.08)';
       });
 
       card.innerHTML = `
