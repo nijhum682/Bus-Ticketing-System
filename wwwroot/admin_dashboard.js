@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const busTableBody = document.getElementById('busTableBody');
-
+  const busSearchInput = document.getElementById('busSearchInput');
   
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
@@ -657,6 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(buses => {
         allBuses = buses;
         busCurrentPage = 1;
+        if (busSearchInput) {
+          busSearchInput.value = '';
+        }
         renderBuses(buses);
       })
       .catch(error => {
@@ -665,6 +668,34 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
+  if (busSearchInput) {
+    busSearchInput.addEventListener('input', () => {
+      const query = busSearchInput.value.toLowerCase().trim();
+      busCurrentPage = 1;
+      if (!query) {
+        renderBuses(allBuses);
+        return;
+      }
+
+      const filtered = allBuses.filter(bus => {
+        const operator = (bus.operator || '').toLowerCase();
+        const busType = (bus.busType || '').toLowerCase();
+        const fromDistrict = (bus.fromDistrict || '').toLowerCase();
+        const toDistrict = (bus.toDistrict || '').toLowerCase();
+        const departureTime = (bus.departureTime || '').toLowerCase();
+        const fare = String(bus.fare);
+        const route = `${fromDistrict} ${toDistrict} ${fromDistrict} to ${toDistrict} ${fromDistrict}➔${toDistrict} ${fromDistrict}->${toDistrict} ${fromDistrict}-${toDistrict}`;
+
+        return operator.includes(query) ||
+               busType.includes(query) ||
+               route.includes(query) ||
+               departureTime.includes(query) ||
+               fare.includes(query);
+      });
+
+      renderBuses(filtered);
+    });
+  }
 
   // --- Load Notice Board List ---
   function loadNotices() {
