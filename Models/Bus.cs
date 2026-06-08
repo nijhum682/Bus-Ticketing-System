@@ -32,5 +32,8 @@ namespace BusTicketingBackend.Models
         [Required]
         [StringLength(100)]
         public string ToDistrict { get; set; } = string.Empty;
+
+        [StringLength(500)]
+        public string BookedSeats { get; set; } = string.Empty;
     }
 }

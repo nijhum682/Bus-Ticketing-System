@@ -127,6 +127,93 @@ namespace BusTicketingBackend.Controllers
                 .ToListAsync();
         }
 
+        // POST: api/bus
+        [HttpPost]
+        public async Task<ActionResult<Bus>> PostBus([FromBody] Bus bus)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            bus.FromDistrict = StandardizeLocation(bus.FromDistrict);
+            bus.ToDistrict = StandardizeLocation(bus.ToDistrict);
+
+            if (bus.Fare <= 0)
+            {
+                bus.Fare = GeoUtils.CalculateFare(bus.FromDistrict, bus.ToDistrict, bus.BusType);
+            }
+
+            _context.Buses.Add(bus);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetBuses), new { id = bus.Id }, bus);
+        }
+
+        // PUT: api/bus/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutBus(int id, [FromBody] Bus bus)
+        {
+            if (id != bus.Id)
+            {
+                return BadRequest(new { message = "Bus ID mismatch." });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            bus.FromDistrict = StandardizeLocation(bus.FromDistrict);
+            bus.ToDistrict = StandardizeLocation(bus.ToDistrict);
+
+            if (bus.Fare <= 0)
+            {
+                bus.Fare = GeoUtils.CalculateFare(bus.FromDistrict, bus.ToDistrict, bus.BusType);
+            }
+
+            _context.Entry(bus).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!await BusExists(id))
+                {
+                    return NotFound(new { message = "Bus not found." });
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok(new { message = "Bus updated successfully!", bus });
+        }
+
+        // DELETE: api/bus/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBus(int id)
+        {
+            var bus = await _context.Buses.FindAsync(id);
+            if (bus == null)
+            {
+                return NotFound(new { message = "Bus not found." });
+            }
+
+            _context.Buses.Remove(bus);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Bus deleted successfully!" });
+        }
+
+        private async Task<bool> BusExists(int id)
+        {
+            return await _context.Buses.AnyAsync(e => e.Id == id);
+        }
+
         private string StandardizeLocation(string val)
         {
             if (string.IsNullOrWhiteSpace(val)) return string.Empty;

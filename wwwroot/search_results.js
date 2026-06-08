@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedSeats = [];
 
   function getBookedSeatsList(bus) {
+    if (bus.bookedSeats !== undefined && bus.bookedSeats !== null && bus.bookedSeats.trim() !== '') {
+      return bus.bookedSeats.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
     const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const cols = ['1', '2', '3', '4'];
     const allSeats = [];
@@ -328,20 +332,72 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!selectedBus || selectedSeats.length === 0) return;
 
       const seatsStr = selectedSeats.join(', ');
-      showToast(`🎟️ Tickets booked successfully! Seats: ${seatsStr} on ${selectedBus.operator}.`, 'success');
-      
-      // Update local userBookedSeats list and availableSeats count
-      if (!selectedBus.userBookedSeats) {
-        selectedBus.userBookedSeats = [];
+      const seatsCount = selectedSeats.length;
+
+      // Compile current booked seats list
+      let currentBookedList = [];
+      if (selectedBus.bookedSeats !== undefined && selectedBus.bookedSeats !== null && selectedBus.bookedSeats.trim() !== '') {
+        currentBookedList = selectedBus.bookedSeats.split(',').map(s => s.trim()).filter(Boolean);
+      } else {
+        currentBookedList = getBookedSeatsList(selectedBus);
       }
-      selectedBus.userBookedSeats.push(...selectedSeats);
-      selectedBus.availableSeats = getAvailableSeatsCount(selectedBus);
 
-      // Close modal
-      if (bookingModal) bookingModal.style.display = 'none';
+      // Combine existing bookings with new selections
+      const newBookedList = [...currentBookedList, ...selectedSeats];
+      newBookedList.sort();
+      const newBookedSeatsStr = newBookedList.join(', ');
+      const newAvailableSeats = Math.max(0, 40 - newBookedList.length);
 
-      // Re-render
-      renderBuses(currentBuses);
+      // Prepare updated bus data
+      const updatedBusData = {
+        id: selectedBus.id,
+        operator: selectedBus.operator,
+        busType: selectedBus.busType,
+        departureTime: selectedBus.departureTime,
+        fare: selectedBus.fare,
+        availableSeats: newAvailableSeats,
+        fromDistrict: selectedBus.fromDistrict,
+        toDistrict: selectedBus.toDistrict,
+        bookedSeats: newBookedSeatsStr
+      };
+
+      // Call backend PUT API to update the seats
+      fetch(`${apiBase}/api/bus/${selectedBus.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedBusData)
+      })
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
+        if (response.ok) {
+          return data;
+        } else {
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
+        }
+      })
+      .then(data => {
+        showToast(`🎟️ Tickets booked successfully! Seats: ${seatsStr} on ${selectedBus.operator}.`, 'success');
+        
+        // Update local object properties to match the database update
+        selectedBus.bookedSeats = newBookedSeatsStr;
+        selectedBus.availableSeats = newAvailableSeats;
+        selectedBus.dbAvailableSeats = newAvailableSeats;
+        selectedBus.userBookedSeats = []; // reset local additions since it has been deducted in DB!
+
+        // Close modal
+        if (bookingModal) bookingModal.style.display = 'none';
+
+        // Re-render listings
+        renderBuses(currentBuses);
+      })
+      .catch(error => {
+        console.error('Error booking ticket:', error);
+        showToast(`❌ Booking failed: ${error.message}`, 'danger');
+      });
     });
   }
 

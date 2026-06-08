@@ -137,9 +137,16 @@ using (var scope = app.Services.CreateScope())
                 `Fare` INT NOT NULL,
                 `AvailableSeats` INT NOT NULL,
                 `FromDistrict` VARCHAR(100) NOT NULL,
-                `ToDistrict` VARCHAR(100) NOT NULL
+                `ToDistrict` VARCHAR(100) NOT NULL,
+                `BookedSeats` VARCHAR(500) NOT NULL DEFAULT ''
             );
         ");
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Buses` ADD COLUMN `BookedSeats` VARCHAR(500) NOT NULL DEFAULT '';");
+        }
+        catch (Exception) { }
 
         try
         {
