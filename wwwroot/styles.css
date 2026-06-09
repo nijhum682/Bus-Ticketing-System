@@ -1429,6 +1429,15 @@ html:has(.signin-page), html:has(.signup-page), html:has(.index-page) {
   margin-top: 1rem !important;
 }
 
+.dashboard-page .book-btn {
+  width: 250px !important;
+  max-width: 250px !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  padding: 0 !important;
+  margin: 0.75rem auto 0 auto !important;
+}
+
 /* Dark Bluish Theme Overrides */
 .auth-right-pane {
   background-color: #122d3a !important;

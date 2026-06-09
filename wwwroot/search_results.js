@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </span>
         </div>
 
-        <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 48px; padding: 0; font-size: 0.95rem; font-weight: 700; width: 100%; max-width: 220px; margin: 0.5rem auto 0 auto; justify-content: center; letter-spacing: 0.3px;">Book Ticket</button>
+        <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 48px; padding: 0; font-size: 0.95rem; font-weight: 700; width: 250px; margin: 0.75rem auto 0 auto; justify-content: center; letter-spacing: 0.3px;">Book Ticket</button>
       `;
 
       card.querySelector('.book-btn').addEventListener('click', () => {
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const isBooked = bookedSeats.includes(seatName) || (bus.userBookedSeats && bus.userBookedSeats.includes(seatName));
           if (isBooked) {
             btn.style.background = 'rgba(255, 255, 255, 0.04)';
-            btn.style.color = 'var(--text-muted)';
+            btn.style.color = 'rgba(255, 255, 255, 0.85)';
             btn.style.borderColor = 'rgba(255, 255, 255, 0.02)';
             btn.style.cursor = 'not-allowed';
             btn.disabled = true;
@@ -309,21 +309,21 @@ document.addEventListener('DOMContentLoaded', () => {
               btn.style.borderColor = 'transparent';
               btn.style.boxShadow = '0 0 10px var(--accent-glow)';
             } else {
-              btn.style.background = 'rgba(16, 185, 129, 0.06)';
-              btn.style.color = 'var(--success)';
-              btn.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+              btn.style.background = 'rgba(16, 185, 129, 0.15)';
+              btn.style.color = '#34d399';
+              btn.style.borderColor = 'rgba(52, 211, 153, 0.5)';
             }
 
             btn.addEventListener('mouseenter', () => {
               if (!selectedSeats.includes(seatName)) {
-                btn.style.background = 'rgba(16, 185, 129, 0.16)';
+                btn.style.background = 'rgba(16, 185, 129, 0.28)';
                 btn.style.color = '#ffffff';
               }
             });
             btn.addEventListener('mouseleave', () => {
               if (!selectedSeats.includes(seatName)) {
-                btn.style.background = 'rgba(16, 185, 129, 0.06)';
-                btn.style.color = 'var(--success)';
+                btn.style.background = 'rgba(16, 185, 129, 0.15)';
+                btn.style.color = '#34d399';
               }
             });
 
@@ -342,9 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (idx > -1) {
       // Deselect seat
       selectedSeats.splice(idx, 1);
-      btnElement.style.background = 'rgba(16, 185, 129, 0.06)';
-      btnElement.style.color = 'var(--success)';
-      btnElement.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      btnElement.style.background = 'rgba(16, 185, 129, 0.15)';
+      btnElement.style.color = '#34d399';
+      btnElement.style.borderColor = 'rgba(52, 211, 153, 0.5)';
       btnElement.style.boxShadow = 'none';
     } else {
       // Select seat

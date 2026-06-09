@@ -301,7 +301,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
           const now = new Date();
 
-          if (journeyTime && journeyTime <= now) {
+          if (booking.status === "Cancelled") {
+            cancelBtn.disabled = true;
+            cancelBtn.style.opacity = '0.85';
+            cancelBtn.style.cursor = 'not-allowed';
+            cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+            cancelBtn.style.color = 'var(--danger)';
+            cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+            cancelBtn.textContent = 'Cancelled';
+          } else if (journeyTime && journeyTime <= now) {
             cancelBtn.disabled = true;
             cancelBtn.style.opacity = '0.85';
             cancelBtn.style.cursor = 'not-allowed';

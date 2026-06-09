@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Database Systems Project: Travello Bus Ticketing. Search Results.">
   <title>Travello - Available Buses</title>
-  <link rel="stylesheet" href="styles.css?v=44">
+  <link rel="stylesheet" href="styles.css?v=56">
   <style>
     .results-wrapper {
       min-height: 100vh;
@@ -51,6 +51,25 @@
       align-items: center;
       justify-content: center;
       transition: all var(--transition-fast);
+    }
+    
+    .seat-btn:disabled {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      opacity: 1 !important;
+      cursor: not-allowed;
+    }
+
+    #confirmBookingBtn:disabled {
+      opacity: 0.75 !important;
+    }
+
+    .book-btn {
+      width: 250px !important;
+      max-width: 250px !important;
+      height: 48px !important;
+      margin: 0.75rem auto 0 auto !important;
     }
   </style>
 </head>
@@ -137,7 +156,7 @@
         <div class="booking-grid-container" style="background: rgba(13, 18, 36, 0.3); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1.25rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; width: 100%;">
           <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; width: 100%; text-align: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.4rem; margin-bottom: 0.25rem; letter-spacing: 1px;">Front / Driver</div>
           
-          <div id="seatsGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; justify-items: center; width: 100%; max-height: 260px; overflow-y: auto; scrollbar-width: thin; padding: 2px;">
+          <div id="seatsGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; justify-items: center; width: 100%; padding: 2px;">
             <!-- 5-column layout: Col 1, Col 2, Corridor (empty), Col 4, Col 5 -->
           </div>
         </div>
@@ -151,7 +170,7 @@
         <!-- Action Buttons -->
         <div style="display: flex; gap: 0.75rem; width: 100%;">
           <button type="button" id="confirmBookingBtn" class="action-btn btn-primary" style="flex: 1; height: 44px; justify-content: center;" disabled>Confirm Booking</button>
-          <button type="button" id="closeBookingModalBtn" class="action-btn btn-secondary" style="flex: 1; height: 44px; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border-color);">Cancel</button>
+          <button type="button" id="closeBookingModalBtn" class="action-btn btn-secondary" style="flex: 1; height: 44px; justify-content: center; background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2);">Cancel</button>
         </div>
       </div>
 
@@ -262,7 +281,7 @@
     <div id="toastMessage" class="toast-message">Portal Alert</div>
   </div>
 
-  <script src="search_results.js?v=49"></script>
+  <script src="search_results.js?v=66"></script>
 </body>
 </html>
 

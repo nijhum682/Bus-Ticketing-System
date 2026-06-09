@@ -1,7 +1,3 @@
-window.onerror = function(message, source, lineno, colno, error) {
-  alert("JS Error: " + message + " at line " + lineno + ":" + colno);
-};
-
 document.addEventListener('DOMContentLoaded', () => {
   let bookingToCancel = null;
   let lastCancelledPaymentMethod = "";
@@ -28,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
   const busTableBody = document.getElementById('busTableBody');
   const busSearchInput = document.getElementById('busSearchInput');
+  const bookingTableBody = document.getElementById('bookingTableBody');
   
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
@@ -155,6 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null;
   let allRegisteredUsers = [];
   let allBuses = [];
+  let allBookings = [];
+  let activeBuses = [];
+  let busCurrentPage = 1;
+  const busPageSize = 50;
 
   function loadProfile() {
     const email = localStorage.getItem('userEmail');
@@ -222,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUsers();
   loadNotices();
   loadBuses();
+  loadBookings();
 
   // --- Profile Update Dialog ---
   const updateProfileBtn = document.getElementById('updateProfileBtn');
@@ -555,11 +557,110 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Load and Render Buses ---
+  // --- Load and Render Bookings ---
 
-  let activeBuses = [];
-  let busCurrentPage = 1;
-  const busPageSize = 50;
+  function renderBookings(bookingsList) {
+    if (!bookingTableBody) return;
+    bookingTableBody.innerHTML = '';
+
+    if (bookingsList.length === 0) {
+      bookingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No ticket bookings found.</td></tr>`;
+      return;
+    }
+
+    bookingsList.forEach(booking => {
+      const tr = document.createElement('tr');
+      
+      let statusText = booking.status || 'Upcoming';
+      let badgeStyle = '';
+      if (statusText === 'Upcoming') {
+        badgeStyle = 'background: rgba(6, 182, 212, 0.15); color: var(--accent-secondary); border: 1px solid rgba(6, 182, 212, 0.3);';
+      } else if (statusText === 'Cancelled') {
+        badgeStyle = 'background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);';
+      } else if (statusText === 'Completed') {
+        badgeStyle = 'background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3);';
+      }
+
+      let formattedIssueDate = 'N/A';
+      if (booking.issueDate) {
+        const issueDate = new Date(booking.issueDate);
+        formattedIssueDate = issueDate.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      tr.innerHTML = `
+        <td style="color: var(--text-primary); font-weight: 500;">${escapeHtml(booking.username)}</td>
+        <td>${escapeHtml(booking.journeyDate)} (${escapeHtml(booking.departureTime)})</td>
+        <td>${escapeHtml(formattedIssueDate)}</td>
+        <td>${escapeHtml(booking.busName)}</td>
+        <td style="font-weight: 600; color: var(--accent-secondary);">${escapeHtml(booking.seats)}</td>
+        <td><span style="font-size: 0.8rem; text-transform: uppercase; font-weight: 600;">${escapeHtml(booking.paymentMethod)}</span></td>
+        <td><span class="role-badge" style="${badgeStyle}">${escapeHtml(statusText)}</span></td>
+      `;
+      bookingTableBody.appendChild(tr);
+    });
+  }
+
+  function loadBookings() {
+    if (!bookingTableBody) return;
+    fetch(`${apiBase}/api/booking`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load bookings database.');
+        return response.json();
+      })
+      .then(bookings => {
+        allBookings = bookings;
+        
+        const bookingSearchInput = document.getElementById('bookingSearchInput');
+        if (bookingSearchInput) {
+          bookingSearchInput.value = '';
+        }
+        
+        renderBookings(bookings);
+      })
+      .catch(error => {
+        console.error(error);
+        bookingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">❌ Error loading bookings database: ${error.message}</td></tr>`;
+      });
+  }
+
+  const bookingSearchInput = document.getElementById('bookingSearchInput');
+  if (bookingSearchInput) {
+    bookingSearchInput.addEventListener('input', () => {
+      const query = bookingSearchInput.value.toLowerCase().trim();
+      if (!query) {
+        renderBookings(allBookings);
+        return;
+      }
+
+      const filtered = allBookings.filter(booking => {
+        const username = (booking.username || '').toLowerCase();
+        const busName = (booking.busName || '').toLowerCase();
+        const journeyDate = (booking.journeyDate || '').toLowerCase();
+        const seats = (booking.seats || '').toLowerCase();
+        const paymentMethod = (booking.paymentMethod || '').toLowerCase();
+        const status = (booking.status || '').toLowerCase();
+        const departureTime = (booking.departureTime || '').toLowerCase();
+
+        return username.includes(query) ||
+               busName.includes(query) ||
+               journeyDate.includes(query) ||
+               seats.includes(query) ||
+               paymentMethod.includes(query) ||
+               status.includes(query) ||
+               departureTime.includes(query);
+      });
+
+      renderBookings(filtered);
+    });
+  }
+
+  // --- Load and Render Buses ---
 
   function renderBuses(busesList) {
     if (!busTableBody) return;
@@ -1444,7 +1545,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.boxShadow = '0 0 8px var(--accent-glow)';
           } else {
             btn.style.background = 'rgba(255, 255, 255, 0.04)';
-            btn.style.color = 'var(--text-muted)';
+            btn.style.color = 'rgba(255, 255, 255, 0.85)';
             btn.style.borderColor = 'rgba(255, 255, 255, 0.02)';
           }
 
@@ -2020,7 +2121,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
             const now = new Date();
 
-            if (journeyTime && journeyTime <= now) {
+            if (booking.status === "Cancelled") {
+              cancelBtn.disabled = true;
+              cancelBtn.style.opacity = '0.85';
+              cancelBtn.style.cursor = 'not-allowed';
+              cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+              cancelBtn.style.color = 'var(--danger)';
+              cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+              cancelBtn.textContent = 'Cancelled';
+            } else if (journeyTime && journeyTime <= now) {
               cancelBtn.disabled = true;
               cancelBtn.style.opacity = '0.85';
               cancelBtn.style.cursor = 'not-allowed';
@@ -2114,6 +2223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Your Cancellation is Successful ! Your payment for ticket booking will be refunded within 12 hours.");
       }
       loadJourneyHistory();
+      loadBookings();
     })
     .catch(err => {
       console.error('Cancellation error:', err);

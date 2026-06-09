@@ -44,5 +44,9 @@ namespace BusTicketingBackend.Models
         [Required]
         [StringLength(50)]
         public string DepartureTime { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
+        public string Status { get; set; } = "Upcoming";
     }
 }

@@ -64,6 +64,54 @@ namespace BusTicketingBackend.Controllers
             return Ok(bookings);
         }
 
+        // GET: api/booking
+        [HttpGet]
+        public async Task<IActionResult> GetAllBookings()
+        {
+            var bookings = await _context.Bookings.ToListAsync();
+            var users = await _context.Users.ToListAsync();
+
+            var result = bookings.Select(b => {
+                var user = users.FirstOrDefault(u => u.Email == b.UserEmail);
+                
+                string computedStatus = b.Status;
+                if (computedStatus != "Cancelled")
+                {
+                    var journeyDateTime = ParseJourneyDateTime(b.JourneyDate, b.DepartureTime);
+                    if (journeyDateTime != null)
+                    {
+                        DateTime nowBangladesh = DateTime.UtcNow.AddHours(6);
+                        if (journeyDateTime.Value <= nowBangladesh)
+                        {
+                            computedStatus = "Completed";
+                        }
+                        else
+                        {
+                            computedStatus = "Upcoming";
+                        }
+                    }
+                    else
+                    {
+                        computedStatus = "Upcoming";
+                    }
+                }
+
+                return new {
+                    b.Id,
+                    Username = user != null ? user.Username : b.UserEmail,
+                    b.JourneyDate,
+                    IssueDate = b.TicketIssuingTime,
+                    b.BusName,
+                    b.Seats,
+                    b.PaymentMethod,
+                    b.DepartureTime,
+                    Status = computedStatus
+                };
+            }).OrderByDescending(r => r.IssueDate).ToList();
+
+            return Ok(result);
+        }
+
         // POST: api/booking/cancel/{id}
         [HttpPost("cancel/{id}")]
         public async Task<IActionResult> CancelBooking(int id)
@@ -116,8 +164,9 @@ namespace BusTicketingBackend.Controllers
             bus.BookedSeats = string.Join(", ", updatedBookedSeats);
             bus.AvailableSeats = Math.Min(40, bus.AvailableSeats + cancelledSeats.Count);
 
-            // Delete the booking record
-            _context.Bookings.Remove(booking);
+            // Update status of the booking record to Cancelled
+            booking.Status = "Cancelled";
+            _context.Bookings.Update(booking);
 
             await _context.SaveChangesAsync();
             Console.WriteLine($"[CancelBooking] Successfully cancelled Booking ID {id}. Restored seats: {string.Join(", ", cancelledSeats)} on Bus ID {bus.Id}");

@@ -43,7 +43,7 @@ if (app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
@@ -140,7 +140,8 @@ using (var scope = app.Services.CreateScope())
                 `Seats` VARCHAR(100) NOT NULL,
                 `PaymentMethod` VARCHAR(50) NOT NULL,
                 `TicketIssuingTime` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                `DepartureTime` VARCHAR(50) NOT NULL DEFAULT ''
+                `DepartureTime` VARCHAR(50) NOT NULL DEFAULT '',
+                `Status` VARCHAR(50) NOT NULL DEFAULT 'Upcoming'
             );
         ");
 
@@ -148,6 +149,13 @@ using (var scope = app.Services.CreateScope())
         {
             await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Bookings` ADD COLUMN `DepartureTime` VARCHAR(50) NOT NULL DEFAULT '';");
             Console.WriteLine("Successfully added 'DepartureTime' column to 'Bookings' table.");
+        }
+        catch (Exception) {}
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Bookings` ADD COLUMN `Status` VARCHAR(50) NOT NULL DEFAULT 'Upcoming';");
+            Console.WriteLine("Successfully added 'Status' column to 'Bookings' table.");
         }
         catch (Exception) {}
 
