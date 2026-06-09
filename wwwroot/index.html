@@ -5,24 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Database Systems Project: Smart Bus Ticketing and Reservation System. High-fidelity glassmorphic portal featuring real-time transit scheduler, fleet categorization, and user authentication modules.">
   <title>Smart Bus Ticketing System</title>
-  <link rel="stylesheet" href="styles.css?v=44">
+  <link rel="stylesheet" href="styles.css?v=65">
   <style>
-    /* Force absolute scroll lock on homepage */
-    html, body.index-page {
-      overflow: hidden !important;
-      height: 100vh !important;
-      max-height: 100vh !important;
-      margin: 0 !important;
-      padding: 0 !important;
+    /* === SINGLE SCROLL PANE === */
+    /* html uses browser default overflow (scrollable). Body must NOT add a second scroll context. */
+    html {
+      scroll-behavior: smooth;
     }
-    /* Guarantee extreme transparency on homepage textbox */
+    /* Homepage card transparency */
     .index-page .landing-card {
       background: rgba(255, 255, 255, 0.003) !important;
       backdrop-filter: blur(8px) !important;
       -webkit-backdrop-filter: blur(8px) !important;
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      overflow: visible !important;
     }
   </style>
+
 </head>
 <body class="index-page">
   <div class="landing-wrapper">
@@ -49,103 +48,11 @@
           Welcome to the future of transit booking and fleet management. Seamlessly schedule routes, reserve premium sleeper cabins, audit passenger registries, and access secure ticket-auditing portals in one fast, integrated database database ecosystem.
         </p>
 
-        <!-- Dynamic Fleet Categories Selector -->
-        <div class="fleet-section">
-          <h3 class="fleet-heading">Explore Our Premium Fleet</h3>
-          
-          <div class="fleet-grid">
-            
-            <!-- Bus Category 1 -->
-            <button class="bus-card" id="busCardCity" data-tier="City Shuttle">
-              <div class="bus-card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 6h18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
-                  <line x1="6" y1="6" x2="6" y2="13"></line>
-                  <rect x="8" y="8" width="3" height="4" rx="0.5"></rect>
-                  <rect x="13" y="8" width="3" height="4" rx="0.5"></rect>
-                  <rect x="18" y="8" width="3" height="4" rx="0.5"></rect>
-                  <circle cx="7" cy="17" r="2"></circle>
-                  <circle cx="17" cy="17" r="2"></circle>
-                  <line x1="2" y1="14" x2="22" y2="14"></line>
-                </svg>
-              </div>
-              <div class="bus-card-details">
-                <span class="bus-card-title">City Shuttle</span>
-                <span class="bus-card-tag">Economy Class</span>
-              </div>
-            </button>
 
-            <!-- Bus Category 2 -->
-            <button class="bus-card" id="busCardExpress" data-tier="Premium Coach">
-              <div class="bus-card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1"></path>
-                  <circle cx="7.5" cy="17.5" r="2.5"></circle>
-                  <circle cx="16.5" cy="17.5" r="2.5"></circle>
-                  <line x1="6" y1="10" x2="12" y2="10"></line>
-                </svg>
-              </div>
-              <div class="bus-card-details">
-                <span class="bus-card-title">Premium Coach</span>
-                <span class="bus-card-tag">AC Executive</span>
-              </div>
-            </button>
-
-            <!-- Bus Category 3 -->
-            <button class="bus-card" id="busCardSleeper" data-tier="Luxury Sleeper">
-              <div class="bus-card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <!-- Outer Bus Frame -->
-                  <rect x="2" y="5" width="20" height="11" rx="2"></rect>
-                  <!-- Bed structure inside the coach -->
-                  <path d="M5 8v5"></path>
-                  <path d="M5 10h10a1 1 0 0 1 1 1v2"></path>
-                  <circle cx="8" cy="9" r="1"></circle>
-                  <!-- Wheels aligned to bottom border -->
-                  <circle cx="6.5" cy="18.5" r="2.5"></circle>
-                  <circle cx="17.5" cy="18.5" r="2.5"></circle>
-                </svg>
-              </div>
-              <div class="bus-card-details">
-                <span class="bus-card-title">Luxury Sleeper</span>
-                <span class="bus-card-tag">Night Express</span>
-              </div>
-            </button>
-
-            <!-- Bus Category 4 -->
-            <button class="bus-card" id="busCardCruiser" data-tier="Super Cruiser">
-              <div class="bus-card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <!-- Tall outer frame (bus shape) -->
-                  <rect x="4" y="3" width="16" height="17" rx="3"></rect>
-                  <!-- Upper Windshield -->
-                  <rect x="6" y="5" width="12" height="4" rx="1"></rect>
-                  <!-- Lower Windshield -->
-                  <rect x="6" y="11" width="12" height="4" rx="1"></rect>
-                  <!-- Grille / Logo space -->
-                  <line x1="9" y1="17" x2="15" y2="17"></line>
-                  <!-- Headlights -->
-                  <circle cx="7" cy="17" r="1"></circle>
-                  <circle cx="17" cy="17" r="1"></circle>
-                  <!-- Side Mirrors -->
-                  <path d="M4 8H3v3h1"></path>
-                  <path d="M20 8h1v3h-1"></path>
-                  <!-- Bottom Wheels/Supports -->
-                  <path d="M6 20v2h2v-2"></path>
-                  <path d="M16 20v2h2v-2"></path>
-                </svg>
-              </div>
-              <div class="bus-card-details">
-                <span class="bus-card-title">Super Cruiser</span>
-                <span class="bus-card-tag">Double-Decker</span>
-              </div>
-            </button>
-
-          </div>
-        </div>
 
         <!-- Call to Action Buttons for Authentication -->
         <div class="landing-actions">
+
           <button id="signInBtn" class="action-btn btn-primary">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"></path>
@@ -163,8 +70,199 @@
           </button>
         </div>
 
+        <!-- More Than 50+ Trusted Bus Operators Segment -->
+        <div class="operators-section">
+          <h3 class="operators-heading">More Than 50+ Trusted Bus Operators</h3>
+          <div class="operators-grid">
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/evergreen.png" alt="Evergreen">
+              </div>
+              <span class="operator-name">Evergreen</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/emad.png" alt="Emad">
+              </div>
+              <span class="operator-name">Emad</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/pabna_express.png" alt="Pabna Express">
+              </div>
+              <span class="operator-name">Pabna Express</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/arafat_paribahan.png" alt="Arafat Paribahan">
+              </div>
+              <span class="operator-name">Arafat Paribahan</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/akota.png" alt="Akota">
+              </div>
+              <span class="operator-name">Akota</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/shyamoli.png" alt="Shyamoli">
+              </div>
+              <span class="operator-name">Shyamoli</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/royal_express.png" alt="Royal Express">
+              </div>
+              <span class="operator-name">Royal Express</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/orin_travels.png" alt="Orin Travels">
+              </div>
+              <span class="operator-name">Orin Travels</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/tungipara.png" alt="Tungipara">
+              </div>
+              <span class="operator-name">Tungipara</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/alhamra.png" alt="Alhamra">
+              </div>
+              <span class="operator-name">Alhamra</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/bilash.png" alt="Bilash">
+              </div>
+              <span class="operator-name">Bilash</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/manik_express.png" alt="Manik Express">
+              </div>
+              <span class="operator-name">Manik Express</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/nabil.png" alt="Nabil">
+              </div>
+              <span class="operator-name">Nabil</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/sr.png" alt="SR">
+              </div>
+              <span class="operator-name">SR</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/shohagh.png" alt="Shohagh">
+              </div>
+              <span class="operator-name">Shohagh</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/royal_coach.png" alt="Royal Coach">
+              </div>
+              <span class="operator-name">Royal Coach</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/hanif.png" alt="Hanif">
+              </div>
+              <span class="operator-name">Hanif</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/soudia.png" alt="Soudia">
+              </div>
+              <span class="operator-name">Soudia</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/robi_express.png" alt="Robi Express">
+              </div>
+              <span class="operator-name">Robi Express</span>
+            </div>
+            <div class="operator-card">
+              <div class="operator-logo-wrap">
+                <img src="images/operators/green_line.png" alt="Green Line">
+              </div>
+              <span class="operator-name">Green Line</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trust Stats Segment -->
+        <div class="trust-stats-section">
+          <h2 class="trust-stats-heading">
+            <span class="trust-highlight">10+ Lakh</span> Travellers Trusted Travello
+          </h2>
+
+          <div class="trust-stats-grid">
+
+            <!-- Card 1: Largest Ticketing Platform -->
+            <div class="trust-stat-card">
+              <div class="trust-icon-wrap">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1-2-3-2H5C3.3 8 2 9.3 2 11v5c0 .6.4 1 1 1h2"/>
+                  <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+                </svg>
+              </div>
+              <h3 class="trust-stat-title">Largest Ticketing Platform</h3>
+              <div class="trust-numbers">
+                <div class="trust-number-item">
+                  <span class="trust-number">10+ Lakh</span>
+                  <span class="trust-number-label">tickets</span>
+                </div>
+                <div class="trust-number-item">
+                  <span class="trust-number">5+ Lakh</span>
+                  <span class="trust-number-label">happy users</span>
+                </div>
+                <div class="trust-number-item">
+                  <span class="trust-number">500+</span>
+                  <span class="trust-number-label">routes</span>
+                </div>
+                <div class="trust-number-item">
+                  <span class="trust-number">50+</span>
+                  <span class="trust-number-label">trusted operators</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Quick & Easy Booking -->
+            <div class="trust-stat-card">
+              <div class="trust-icon-wrap">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <h3 class="trust-stat-title">Quick &amp; Easy Booking</h3>
+              <p class="trust-stat-desc">Skip the queues with Travello! Book bus tickets online with access to 50+ operators nationwide. Easily browse routes and confirm your seat in seconds.</p>
+            </div>
+
+            <!-- Card 3: Fast Customer Support -->
+            <div class="trust-stat-card">
+              <div class="trust-icon-wrap">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <h3 class="trust-stat-title">Fast Customer Support</h3>
+              <p class="trust-stat-desc">Quick and responsive assistance to resolve your issues without delay — because your time matters to us.</p>
+            </div>
+
+          </div>
+        </div>
+
       </section>
     </main>
+
 
   </div>
 
@@ -174,6 +272,6 @@
     <div id="toastMessage" class="toast-message">Portal Alert</div>
   </div>
 
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=32"></script>
 </body>
 </html>
