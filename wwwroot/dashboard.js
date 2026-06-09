@@ -303,11 +303,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (journeyTime && journeyTime <= now) {
             cancelBtn.disabled = true;
-            cancelBtn.style.opacity = '0.4';
+            cancelBtn.style.opacity = '0.85';
             cancelBtn.style.cursor = 'not-allowed';
-            cancelBtn.style.background = 'rgba(255, 255, 255, 0.05)';
-            cancelBtn.style.color = 'var(--text-muted)';
-            cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            cancelBtn.style.background = 'rgba(255, 255, 255, 0.08)';
+            cancelBtn.style.color = 'rgba(255, 255, 255, 0.65)';
+            cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             cancelBtn.textContent = 'Journey Completed';
           } else {
             cancelBtn.addEventListener('mouseenter', () => {

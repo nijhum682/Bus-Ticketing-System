@@ -3,6 +3,17 @@ window.onerror = function(message, source, lineno, colno, error) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  let bookingToCancel = null;
+  let lastCancelledPaymentMethod = "";
+
+  // Search & Journey History DOM Elements
+  const fromInput = document.getElementById('fromInput');
+  const toInput = document.getElementById('toInput');
+  const swapBtn = document.getElementById('swapBtn');
+  const journeyDateInput = document.getElementById('journeyDateInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const journeyHistoryContainer = document.getElementById('journeyHistoryContainer');
+
   // --- DOM Elements ---
   const userTableBody = document.getElementById('userTableBody');
   const adminNoticesContainer = document.getElementById('adminNoticesContainer');
@@ -1649,4 +1660,514 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // ==========================================
+  // --- Admin Ticket Booking & Journey History Integration ---
+  // ==========================================
+
+  // --- Searchable Dropdown Helper ---
+  function initSearchableSelect(inputId, dropdownId) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    if (!input || !dropdown) return;
+
+    function renderDropdown(filterText = '') {
+      dropdown.innerHTML = '';
+      const filtered = districts.filter(d => 
+        d.toLowerCase().includes(filterText.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        const noResult = document.createElement('div');
+        noResult.style.padding = '0.75rem 1rem';
+        noResult.style.color = 'var(--text-muted)';
+        noResult.style.fontSize = '0.85rem';
+        noResult.textContent = 'No district found';
+        dropdown.appendChild(noResult);
+        return;
+      }
+
+      filtered.forEach(district => {
+        const option = document.createElement('div');
+        option.style.padding = '0.65rem 1rem';
+        option.style.color = 'var(--text-secondary)';
+        option.style.cursor = 'pointer';
+        option.style.fontSize = '0.88rem';
+        option.style.transition = 'all var(--transition-fast)';
+        option.style.textAlign = 'left';
+        option.textContent = district;
+
+        option.addEventListener('mouseenter', () => {
+          option.style.background = 'rgba(6, 182, 212, 0.15)';
+          option.style.color = 'var(--text-primary)';
+          option.style.paddingLeft = '1.25rem';
+        });
+
+        option.addEventListener('mouseleave', () => {
+          option.style.background = 'transparent';
+          option.style.color = 'var(--text-secondary)';
+          option.style.paddingLeft = '1rem';
+        });
+
+        option.addEventListener('click', (e) => {
+          input.value = district;
+          dropdown.style.display = 'none';
+          input.dispatchEvent(new Event('input'));
+        });
+
+        dropdown.appendChild(option);
+      });
+    }
+
+    input.addEventListener('focus', () => {
+      renderDropdown('');
+      dropdown.style.display = 'block';
+    });
+
+    input.addEventListener('input', () => {
+      renderDropdown(input.value);
+      dropdown.style.display = 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    input.addEventListener('click', (e) => {
+      renderDropdown('');
+      dropdown.style.display = 'block';
+    });
+  }
+
+  // Initialize City Selectors
+  initSearchableSelect('fromInput', 'fromDropdown');
+  initSearchableSelect('toInput', 'toDropdown');
+
+  // Initialize Flatpickr Datepicker
+  if (journeyDateInput && typeof flatpickr !== 'undefined') {
+    const maxSelectableDate = new Date();
+    maxSelectableDate.setDate(maxSelectableDate.getDate() + 10);
+    flatpickr(journeyDateInput, {
+      dateFormat: "d/m/y",
+      allowInput: true,
+      placeholder: "dd/mm/yy",
+      disableMobile: true,
+      minDate: "today",
+      maxDate: maxSelectableDate
+    });
+  }
+
+  // Destinations Swapper
+  if (swapBtn && fromInput && toInput) {
+    swapBtn.addEventListener('click', () => {
+      const temp = fromInput.value;
+      fromInput.value = toInput.value;
+      toInput.value = temp;
+      showToast('🔄 Destinations swapped', 'info');
+    });
+  }
+
+  // Route Search Form Handler
+  if (searchBtn && fromInput && toInput && journeyDateInput) {
+    searchBtn.addEventListener('click', () => {
+      const fromVal = fromInput.value;
+      const toVal = toInput.value;
+      const dateVal = journeyDateInput.value.trim();
+
+      if (!fromVal || !toVal) {
+        showToast('⚠️ Please select both From and To locations!', 'warning');
+        return;
+      }
+
+      if (fromVal === toVal) {
+        showToast('⚠️ From and To destinations cannot be the same!', 'warning');
+        return;
+      }
+
+      if (!dateVal) {
+        showToast('⚠️ Please enter a journey date!', 'warning');
+        return;
+      }
+
+      // Date Range Validation
+      const parts = dateVal.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const yearPart = parts[2];
+        const year = yearPart.length === 2 ? 2000 + parseInt(yearPart, 10) : parseInt(yearPart, 10);
+        
+        const selectedDate = new Date(year, month, day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const maxDate = new Date();
+        maxDate.setDate(today.getDate() + 10);
+        maxDate.setHours(23, 59, 59, 999);
+        
+        if (selectedDate < today) {
+          showToast('⚠️ Cannot select a date in the past!', 'warning');
+          return;
+        }
+        if (selectedDate > maxDate) {
+          showToast('⚠️ Date must be within the next 10 days!', 'warning');
+          return;
+        }
+      }
+
+      showToast(`🔍 Searching buses from ${fromVal} to ${toVal} on ${dateVal}...`, 'success');
+      setTimeout(() => {
+        window.location.href = `search_results.html?from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateVal)}`;
+      }, 1000);
+    });
+  }
+
+  // Date Parsing Helper
+  function parseJourneyDateTime(dateStr, timeStr) {
+    if (!dateStr) return null;
+    const tStr = timeStr || "12:00 PM";
+    try {
+      const dateParts = dateStr.split('/');
+      if (dateParts.length !== 3) return null;
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      let year = parseInt(dateParts[2], 10);
+      if (year < 100) year += 2000;
+
+      const timeRegex = /^(\d+):(\d+)\s*(AM|PM)$/i;
+      const match = tStr.trim().match(timeRegex);
+      if (!match) return null;
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+
+      if (ampm === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      return new Date(year, month, day, hours, minutes, 0, 0);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Load Admin's personal bookings
+  function loadJourneyHistory() {
+    if (!userEmail || !journeyHistoryContainer) return;
+
+    fetch(`${apiBase}/api/booking/user?email=${encodeURIComponent(userEmail)}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Could not fetch journey history from database.');
+        }
+        return response.json();
+      })
+      .then(bookings => {
+        journeyHistoryContainer.innerHTML = '';
+        if (bookings.length === 0) {
+          journeyHistoryContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 1.5rem 0; font-size: 0.9rem;">No journeys booked yet.</div>';
+          return;
+        }
+
+        bookings.forEach(booking => {
+          try {
+            const card = document.createElement('div');
+            card.style.background = 'rgba(255, 255, 255, 0.02)';
+            card.style.border = '1px solid var(--border-color)';
+            card.style.borderRadius = 'var(--border-radius-sm)';
+            card.style.padding = '1rem';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '0.75rem';
+            card.style.transition = 'all var(--transition-fast)';
+
+            // Hover effect
+            card.addEventListener('mouseenter', () => {
+              card.style.borderColor = 'var(--accent-secondary)';
+              card.style.background = 'rgba(6, 182, 212, 0.05)';
+            });
+            card.addEventListener('mouseleave', () => {
+              card.style.borderColor = 'var(--border-color)';
+              card.style.background = 'rgba(255, 255, 255, 0.02)';
+            });
+
+            // Header: Bus Name & Payment Method Badge
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            
+            const busNameEl = document.createElement('span');
+            busNameEl.style.fontWeight = '700';
+            busNameEl.style.color = 'var(--text-primary)';
+            busNameEl.style.fontSize = '0.95rem';
+            busNameEl.textContent = booking.busName;
+
+            const paymentBadge = document.createElement('span');
+            paymentBadge.style.fontSize = '0.75rem';
+            paymentBadge.style.fontWeight = '600';
+            paymentBadge.style.padding = '0.2rem 0.6rem';
+            paymentBadge.style.borderRadius = '4px';
+            paymentBadge.style.textTransform = 'uppercase';
+            
+            const payMethod = (booking.paymentMethod || '').toLowerCase();
+            if (payMethod === 'bkash') {
+              paymentBadge.style.background = 'rgba(219, 39, 119, 0.15)';
+              paymentBadge.style.color = '#db2777';
+              paymentBadge.textContent = 'bKash';
+            } else if (payMethod === 'nagad') {
+              paymentBadge.style.background = 'rgba(249, 115, 22, 0.15)';
+              paymentBadge.style.color = '#f97316';
+              paymentBadge.textContent = 'Nagad';
+            } else if (payMethod === 'rocket') {
+              paymentBadge.style.background = 'rgba(147, 51, 234, 0.15)';
+              paymentBadge.style.color = '#a855f7';
+              paymentBadge.textContent = 'Rocket';
+            } else {
+              paymentBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+              paymentBadge.style.color = '#3b82f6';
+              paymentBadge.textContent = booking.paymentMethod || 'Card';
+            }
+
+            header.appendChild(busNameEl);
+            header.appendChild(paymentBadge);
+            card.appendChild(header);
+
+            // Divider
+            const hr = document.createElement('div');
+            hr.style.height = '1px';
+            hr.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.08)';
+            card.appendChild(hr);
+
+            // Details grid
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = '1.2fr 0.8fr';
+            grid.style.gap = '0.5rem';
+            grid.style.fontSize = '0.82rem';
+
+            // Route
+            const routeVal = document.createElement('div');
+            routeVal.style.color = 'var(--text-primary)';
+            routeVal.style.fontWeight = '500';
+            routeVal.innerHTML = `<span style="color: var(--text-secondary);">Route:</span> ${booking.fromDistrict} ➔ ${booking.toDistrict}`;
+            grid.appendChild(routeVal);
+
+            // Seats
+            const seatsVal = document.createElement('div');
+            seatsVal.style.color = 'var(--text-primary)';
+            seatsVal.style.fontWeight = '500';
+            seatsVal.style.textAlign = 'right';
+            seatsVal.innerHTML = `<span style="color: var(--text-secondary);">Seats:</span> <strong style="color: var(--accent-secondary);">${booking.seats}</strong>`;
+            grid.appendChild(seatsVal);
+
+            // Journey Date
+            const dateVal = document.createElement('div');
+            dateVal.style.color = 'var(--text-primary)';
+            dateVal.style.fontWeight = '500';
+            dateVal.innerHTML = `<span style="color: var(--text-secondary);">Journey Date:</span> ${booking.journeyDate}`;
+            grid.appendChild(dateVal);
+
+            // Ticket Issue Time
+            const issueTimeVal = document.createElement('div');
+            issueTimeVal.style.color = 'var(--text-secondary)';
+            issueTimeVal.style.textAlign = 'right';
+            issueTimeVal.style.fontSize = '0.78rem';
+            
+            if (booking.ticketIssuingTime) {
+              const issueDate = new Date(booking.ticketIssuingTime);
+              const formattedTime = issueDate.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              });
+              issueTimeVal.innerHTML = `<span style="color: var(--text-muted); font-size: 0.72rem;">Issued:</span> ${formattedTime}`;
+            } else {
+              issueTimeVal.textContent = '';
+            }
+            grid.appendChild(issueTimeVal);
+
+            card.appendChild(grid);
+
+            // Cancel Booking Button
+            const cancelBtnContainer = document.createElement('div');
+            cancelBtnContainer.style.marginTop = '0.75rem';
+            cancelBtnContainer.style.display = 'flex';
+            cancelBtnContainer.style.justifyContent = 'flex-end';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'action-btn btn-secondary';
+            cancelBtn.style.padding = '0.4rem 1.2rem';
+            cancelBtn.style.fontSize = '0.8rem';
+            cancelBtn.style.height = '34px';
+            cancelBtn.style.borderRadius = 'var(--border-radius-sm)';
+            cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+            cancelBtn.style.color = 'var(--danger)';
+            cancelBtn.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+            cancelBtn.style.fontWeight = '600';
+            cancelBtn.style.cursor = 'pointer';
+            cancelBtn.style.transition = 'all var(--transition-fast)';
+            cancelBtn.textContent = 'Cancel Booking';
+
+            const depTime = booking.departureTime || '12:00 PM';
+            const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+            const now = new Date();
+
+            if (journeyTime && journeyTime <= now) {
+              cancelBtn.disabled = true;
+              cancelBtn.style.opacity = '0.85';
+              cancelBtn.style.cursor = 'not-allowed';
+              cancelBtn.style.background = 'rgba(255, 255, 255, 0.08)';
+              cancelBtn.style.color = 'rgba(255, 255, 255, 0.65)';
+              cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              cancelBtn.textContent = 'Journey Completed';
+            } else {
+              cancelBtn.addEventListener('mouseenter', () => {
+                cancelBtn.style.background = 'var(--danger)';
+                cancelBtn.style.color = '#ffffff';
+                cancelBtn.style.borderColor = 'var(--danger)';
+                cancelBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+              });
+              cancelBtn.addEventListener('mouseleave', () => {
+                cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+                cancelBtn.style.color = 'var(--danger)';
+                cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                cancelBtn.style.boxShadow = 'none';
+              });
+            }
+
+            cancelBtn.addEventListener('click', () => {
+              const depTime = booking.departureTime || '12:00 PM';
+              const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+              if (journeyTime) {
+                const now = new Date();
+                const timeDiffMs = journeyTime - now;
+                const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+
+                if (timeDiffHours < 12) {
+                  const cancelWarningModal = document.getElementById('cancelWarningModal');
+                  if (cancelWarningModal) {
+                    cancelWarningModal.style.display = 'flex';
+                  } else {
+                    alert("Cancellation is only allowed at least 12 hours before the journey departure time.");
+                  }
+                  showToast("❌ Cancellation is only allowed at least 12 hours before departure.", "danger");
+                  return;
+                }
+              }
+
+              bookingToCancel = booking;
+              const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+              const cancelConfirmMessage = document.getElementById('cancelConfirmMessage');
+              if (cancelConfirmModal) {
+                if (cancelConfirmMessage) {
+                  cancelConfirmMessage.textContent = `Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`;
+                }
+                cancelConfirmModal.style.display = 'flex';
+              } else {
+                if (confirm(`Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`)) {
+                  executeCancellation(booking.id);
+                }
+              }
+            });
+
+            cancelBtnContainer.appendChild(cancelBtn);
+            card.appendChild(cancelBtnContainer);
+
+            journeyHistoryContainer.appendChild(card);
+          } catch (err) {
+            console.error('Error rendering journey booking card:', err, booking);
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching journey history:', error);
+        journeyHistoryContainer.innerHTML = `<div style="text-align: center; color: var(--danger); padding: 1rem 0; font-size: 0.9rem;">❌ Failed to load journey history.</div>`;
+      });
+  }
+
+  // Execute cancellation request
+  function executeCancellation(bookingId) {
+    if (!bookingId) return;
+    
+    fetch(`${apiBase}/api/booking/cancel/${bookingId}`, {
+      method: 'POST'
+    })
+    .then(res => {
+      if (!res.ok) {
+        return res.json().then(err => { throw new Error(err.message || "Failed to cancel booking."); });
+      }
+      return res.json();
+    })
+    .then(data => {
+      const cancellationModal = document.getElementById('cancellationModal');
+      if (cancellationModal) {
+        cancellationModal.style.display = 'flex';
+      } else {
+        alert("Your Cancellation is Successful ! Your payment for ticket booking will be refunded within 12 hours.");
+      }
+      loadJourneyHistory();
+    })
+    .catch(err => {
+      console.error('Cancellation error:', err);
+      showToast(`❌ Cancellation failed: ${err.message}`, 'danger');
+    });
+  }
+
+  // Wire cancellation modal actions
+  const cancellationModal = document.getElementById('cancellationModal');
+  const closeCancellationModalBtn = document.getElementById('closeCancellationModalBtn');
+  if (closeCancellationModalBtn && cancellationModal) {
+    closeCancellationModalBtn.addEventListener('click', () => {
+      cancellationModal.style.display = 'none';
+      const method = lastCancelledPaymentMethod || "Card";
+      showToast(`Your refunded amount is sent to the corresponding account (through which you paid via ${method}).`, 'success');
+    });
+  }
+
+  const confirmCancellationBtn = document.getElementById('confirmCancellationBtn');
+  if (confirmCancellationBtn) {
+    confirmCancellationBtn.addEventListener('click', () => {
+      const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+      if (cancelConfirmModal) {
+        cancelConfirmModal.style.display = 'none';
+      }
+      if (bookingToCancel) {
+        lastCancelledPaymentMethod = bookingToCancel.paymentMethod;
+        executeCancellation(bookingToCancel.id);
+        bookingToCancel = null;
+      }
+    });
+  }
+
+  const closeConfirmModalBtn = document.getElementById('closeConfirmModalBtn');
+  if (closeConfirmModalBtn) {
+    closeConfirmModalBtn.addEventListener('click', () => {
+      const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+      if (cancelConfirmModal) {
+        cancelConfirmModal.style.display = 'none';
+      }
+      bookingToCancel = null;
+    });
+  }
+
+  const closeWarningModalBtn = document.getElementById('closeWarningModalBtn');
+  if (closeWarningModalBtn) {
+    closeWarningModalBtn.addEventListener('click', () => {
+      const cancelWarningModal = document.getElementById('cancelWarningModal');
+      if (cancelWarningModal) {
+        cancelWarningModal.style.display = 'none';
+      }
+    });
+  }
+
+  // Load journey history initially
+  loadJourneyHistory();
 });
