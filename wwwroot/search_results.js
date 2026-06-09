@@ -530,7 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
         toDistrict: selectedBus.toDistrict,
         journeyDate: dateVal,
         seats: seatsStr,
-        paymentMethod: selectedPaymentMethod
+        paymentMethod: selectedPaymentMethod,
+        departureTime: selectedBus.departureTime
       };
 
       fetch(`${apiBase}/api/booking`, {

@@ -63,5 +63,80 @@ namespace BusTicketingBackend.Controllers
 
             return Ok(bookings);
         }
+
+        // POST: api/booking/cancel/{id}
+        [HttpPost("cancel/{id}")]
+        public async Task<IActionResult> CancelBooking(int id)
+        {
+            Console.WriteLine($"[CancelBooking] Request received for Booking ID {id}");
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking == null)
+            {
+                return NotFound(new { message = "Booking record not found." });
+            }
+
+            var bus = await _context.Buses.FindAsync(booking.BusId);
+            if (bus == null)
+            {
+                return NotFound(new { message = "Corresponding bus record not found." });
+            }
+
+            // Parse dates and validate 12-hour limit
+            string departureTime = string.IsNullOrEmpty(booking.DepartureTime) ? bus.DepartureTime : booking.DepartureTime;
+            var journeyDateTime = ParseJourneyDateTime(booking.JourneyDate, departureTime);
+            if (journeyDateTime == null)
+            {
+                return BadRequest(new { message = "Could not parse journey date or departure time." });
+            }
+
+            DateTime nowBangladesh = DateTime.UtcNow.AddHours(6);
+            var timeDifference = journeyDateTime.Value - nowBangladesh;
+
+            if (timeDifference.TotalSeconds <= 0)
+            {
+                return BadRequest(new { message = "Cannot cancel an expired or completed journey." });
+            }
+
+            if (timeDifference.TotalHours < 12)
+            {
+                return BadRequest(new { message = "Cancellation must be done at least 12 hours prior to the journey departure time." });
+            }
+
+            // Restore seats on the bus
+            var cancelledSeats = booking.Seats.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(s => s.Trim())
+                                              .ToList();
+
+            var currentBookedSeats = (bus.BookedSeats ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                                    .Select(s => s.Trim())
+                                                    .ToList();
+
+            var updatedBookedSeats = currentBookedSeats.Where(s => !cancelledSeats.Contains(s)).ToList();
+
+            bus.BookedSeats = string.Join(", ", updatedBookedSeats);
+            bus.AvailableSeats = Math.Min(40, bus.AvailableSeats + cancelledSeats.Count);
+
+            // Delete the booking record
+            _context.Bookings.Remove(booking);
+
+            await _context.SaveChangesAsync();
+            Console.WriteLine($"[CancelBooking] Successfully cancelled Booking ID {id}. Restored seats: {string.Join(", ", cancelledSeats)} on Bus ID {bus.Id}");
+
+            return Ok(new { message = "Your Cancellation is Successful! Your payment for ticket booking will be refunded within 12 hours." });
+        }
+
+        private static DateTime? ParseJourneyDateTime(string dateStr, string timeStr)
+        {
+            try
+            {
+                string format = "d/M/yy h:mm tt";
+                string combined = $"{dateStr.Trim()} {timeStr.Trim()}";
+                return DateTime.ParseExact(combined, format, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 }

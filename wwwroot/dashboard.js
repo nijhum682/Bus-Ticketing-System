@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+  let bookingToCancel = null;
+  let lastCancelledPaymentMethod = "";
   // --- DOM Elements ---
   const nameDisplay = document.getElementById('nameDisplay');
   const emailDisplay = document.getElementById('emailDisplay');
@@ -29,6 +31,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userRole === 'Admin') {
     window.location.href = 'admin_dashboard.html';
     return;
+  }
+
+  function parseJourneyDateTime(dateStr, timeStr) {
+    if (!dateStr) return null;
+    const tStr = timeStr || "12:00 PM";
+    try {
+      const dateParts = dateStr.split('/');
+      if (dateParts.length !== 3) return null;
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      let year = parseInt(dateParts[2], 10);
+      if (year < 100) year += 2000;
+
+      const timeRegex = /^(\d+):(\d+)\s*(AM|PM)$/i;
+      const match = tStr.trim().match(timeRegex);
+      if (!match) return null;
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+
+      if (ampm === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      return new Date(year, month, day, hours, minutes, 0, 0);
+    } catch (e) {
+      return null;
+    }
   }
 
   // --- API Setup & Fetch Profile ---
@@ -122,7 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         bookings.forEach(booking => {
-          const card = document.createElement('div');
+          try {
+            const card = document.createElement('div');
           card.style.background = 'rgba(255, 255, 255, 0.02)';
           card.style.border = '1px solid var(--border-color)';
           card.style.borderRadius = 'var(--border-radius-sm)';
@@ -242,7 +275,99 @@ document.addEventListener('DOMContentLoaded', () => {
           grid.appendChild(issueTimeVal);
 
           card.appendChild(grid);
-          journeyHistoryContainer.appendChild(card);
+
+          // Cancel Booking Button
+          const cancelBtnContainer = document.createElement('div');
+          cancelBtnContainer.style.marginTop = '0.75rem';
+          cancelBtnContainer.style.display = 'flex';
+          cancelBtnContainer.style.justifyContent = 'flex-end';
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'action-btn btn-secondary';
+          cancelBtn.style.padding = '0.4rem 1.2rem';
+          cancelBtn.style.fontSize = '0.8rem';
+          cancelBtn.style.height = '34px';
+          cancelBtn.style.borderRadius = 'var(--border-radius-sm)';
+          cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+          cancelBtn.style.color = 'var(--danger)';
+          cancelBtn.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+          cancelBtn.style.fontWeight = '600';
+          cancelBtn.style.cursor = 'pointer';
+          cancelBtn.style.transition = 'all var(--transition-fast)';
+          cancelBtn.textContent = 'Cancel Booking';
+
+          const depTime = booking.departureTime || '12:00 PM';
+          const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+          const now = new Date();
+
+          if (journeyTime && journeyTime <= now) {
+            cancelBtn.disabled = true;
+            cancelBtn.style.opacity = '0.4';
+            cancelBtn.style.cursor = 'not-allowed';
+            cancelBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+            cancelBtn.style.color = 'var(--text-muted)';
+            cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            cancelBtn.textContent = 'Journey Completed';
+          } else {
+            cancelBtn.addEventListener('mouseenter', () => {
+              cancelBtn.style.background = 'var(--danger)';
+              cancelBtn.style.color = '#ffffff';
+              cancelBtn.style.borderColor = 'var(--danger)';
+              cancelBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+            });
+            cancelBtn.addEventListener('mouseleave', () => {
+              cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+              cancelBtn.style.color = 'var(--danger)';
+              cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+              cancelBtn.style.boxShadow = 'none';
+            });
+          }
+
+          cancelBtn.addEventListener('click', () => {
+            // Client-side 12-hour limit check
+            const depTime = booking.departureTime || '12:00 PM';
+            const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+            if (journeyTime) {
+              const now = new Date();
+              const timeDiffMs = journeyTime - now;
+              const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+
+              if (timeDiffHours < 12) {
+                const cancelWarningModal = document.getElementById('cancelWarningModal');
+                if (cancelWarningModal) {
+                  cancelWarningModal.style.display = 'flex';
+                } else {
+                  alert("Cancellation is only allowed at least 12 hours before the journey departure time.");
+                }
+                showToast("❌ Cancellation is only allowed at least 12 hours before departure.", "danger");
+                return;
+              }
+            }
+
+            // Custom Confirm Dialog
+            bookingToCancel = booking;
+            const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+            const cancelConfirmMessage = document.getElementById('cancelConfirmMessage');
+            if (cancelConfirmModal) {
+              if (cancelConfirmMessage) {
+                cancelConfirmMessage.textContent = `Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`;
+              }
+              cancelConfirmModal.style.display = 'flex';
+            } else {
+              if (confirm(`Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`)) {
+                executeCancellation(booking.id);
+              }
+            }
+          });
+
+          cancelBtnContainer.appendChild(cancelBtn);
+          card.appendChild(cancelBtnContainer);
+
+            journeyHistoryContainer.appendChild(card);
+          } catch (err) {
+            console.error('Error rendering journey booking card:', err, booking);
+          }
         });
       })
       .catch(error => {
@@ -761,5 +886,84 @@ document.addEventListener('DOMContentLoaded', () => {
     toastTimeout = setTimeout(() => {
       toast.classList.remove('show');
     }, 4000);
+  }
+
+  // --- Cancellation Modal Close ---
+  const cancellationModal = document.getElementById('cancellationModal');
+  const closeCancellationModalBtn = document.getElementById('closeCancellationModalBtn');
+  if (closeCancellationModalBtn && cancellationModal) {
+    closeCancellationModalBtn.addEventListener('click', () => {
+      cancellationModal.style.display = 'none';
+      const method = lastCancelledPaymentMethod || "Card";
+      showToast(`Your refunded amount is sent to the corresponding account (through which you paid via ${method}).`, 'success');
+    });
+  }
+
+  // --- Cancellation Helpers & Event Handlers ---
+  function executeCancellation(bookingId) {
+    if (!bookingId) return;
+    
+    // Call backend API to cancel
+    fetch(`${apiBase}/api/booking/cancel/${bookingId}`, {
+      method: 'POST'
+    })
+    .then(res => {
+      if (!res.ok) {
+        return res.json().then(err => { throw new Error(err.message || "Failed to cancel booking."); });
+      }
+      return res.json();
+    })
+    .then(data => {
+      const cancellationModal = document.getElementById('cancellationModal');
+      if (cancellationModal) {
+        cancellationModal.style.display = 'flex';
+      } else {
+        alert("Your Cancellation is Successful ! Your payment for ticket booking will be refunded within 12 hours.");
+      }
+      loadJourneyHistory();
+    })
+    .catch(err => {
+      console.error('Cancellation error:', err);
+      showToast(`❌ Cancellation failed: ${err.message}`, 'danger');
+    });
+  }
+
+  // Yes, Confirm Cancellation
+  const confirmCancellationBtn = document.getElementById('confirmCancellationBtn');
+  if (confirmCancellationBtn) {
+    confirmCancellationBtn.addEventListener('click', () => {
+      const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+      if (cancelConfirmModal) {
+        cancelConfirmModal.style.display = 'none';
+      }
+      if (bookingToCancel) {
+        lastCancelledPaymentMethod = bookingToCancel.paymentMethod;
+        executeCancellation(bookingToCancel.id);
+        bookingToCancel = null;
+      }
+    });
+  }
+
+  // No, Keep Booking
+  const closeConfirmModalBtn = document.getElementById('closeConfirmModalBtn');
+  if (closeConfirmModalBtn) {
+    closeConfirmModalBtn.addEventListener('click', () => {
+      const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+      if (cancelConfirmModal) {
+        cancelConfirmModal.style.display = 'none';
+      }
+      bookingToCancel = null;
+    });
+  }
+
+  // Close Warning Modal
+  const closeWarningModalBtn = document.getElementById('closeWarningModalBtn');
+  if (closeWarningModalBtn) {
+    closeWarningModalBtn.addEventListener('click', () => {
+      const cancelWarningModal = document.getElementById('cancelWarningModal');
+      if (cancelWarningModal) {
+        cancelWarningModal.style.display = 'none';
+      }
+    });
   }
 });

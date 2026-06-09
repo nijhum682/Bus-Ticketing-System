@@ -139,9 +139,18 @@ using (var scope = app.Services.CreateScope())
                 `JourneyDate` VARCHAR(50) NOT NULL,
                 `Seats` VARCHAR(100) NOT NULL,
                 `PaymentMethod` VARCHAR(50) NOT NULL,
-                `TicketIssuingTime` DATETIME DEFAULT CURRENT_TIMESTAMP
+                `TicketIssuingTime` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `DepartureTime` VARCHAR(50) NOT NULL DEFAULT ''
             );
         ");
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Bookings` ADD COLUMN `DepartureTime` VARCHAR(50) NOT NULL DEFAULT '';");
+            Console.WriteLine("Successfully added 'DepartureTime' column to 'Bookings' table.");
+        }
+        catch (Exception) {}
+
         Console.WriteLine("Successfully verified or created Bookings table.");
 
         var bookingsCount = await context.Bookings.CountAsync();
