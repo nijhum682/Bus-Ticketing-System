@@ -19,6 +19,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmBookingBtn = document.getElementById('confirmBookingBtn');
   const closeBookingModalBtn = document.getElementById('closeBookingModalBtn');
 
+  // Step Containers
+  const bookingSeatStep = document.getElementById('bookingSeatStep');
+  const bookingPaymentMethodStep = document.getElementById('bookingPaymentMethodStep');
+  const bookingAccountStep = document.getElementById('bookingAccountStep');
+  const bookingOtpStep = document.getElementById('bookingOtpStep');
+  const bookingPinStep = document.getElementById('bookingPinStep');
+  const bookingSuccessStep = document.getElementById('bookingSuccessStep');
+
+  // Input & Button Elements
+  const bookingModalTitleText = document.getElementById('bookingModalTitleText');
+  const payMethodNextBtn = document.getElementById('payMethodNextBtn');
+  const payMethodPrevBtn = document.getElementById('payMethodPrevBtn');
+  const accountNextBtn = document.getElementById('accountNextBtn');
+  const accountPrevBtn = document.getElementById('accountPrevBtn');
+  const bookingAccountInput = document.getElementById('bookingAccountInput');
+  const accountInputLabel = document.getElementById('accountInputLabel');
+  const otpNextBtn = document.getElementById('otpNextBtn');
+  const otpPrevBtn = document.getElementById('otpPrevBtn');
+  const bookingOtpInput = document.getElementById('bookingOtpInput');
+  const otpAlertMessage = document.getElementById('otpAlertMessage');
+  const otpDummyContainer = document.getElementById('otpDummyContainer');
+  const otpDummyValue = document.getElementById('otpDummyValue');
+  const pinNextBtn = document.getElementById('pinNextBtn');
+  const pinPrevBtn = document.getElementById('pinPrevBtn');
+  const bookingPinInput = document.getElementById('bookingPinInput');
+  const pinAlertMessage = document.getElementById('pinAlertMessage');
+  const pinDummyContainer = document.getElementById('pinDummyContainer');
+  const pinDummyValue = document.getElementById('pinDummyValue');
+  const pinInputLabel = document.getElementById('pinInputLabel');
+  const successCloseBtn = document.getElementById('successCloseBtn');
+
   // Parse Query Parameters
   const urlParams = new URLSearchParams(window.location.search);
   const fromVal = urlParams.get('from') || '';
@@ -220,6 +251,21 @@ document.addEventListener('DOMContentLoaded', () => {
     totalPriceLabel.textContent = '৳0';
     if (confirmBookingBtn) confirmBookingBtn.disabled = true;
 
+    // Reset inputs and error messages
+    if (bookingAccountInput) bookingAccountInput.value = '';
+    if (bookingOtpInput) bookingOtpInput.value = '';
+    if (bookingPinInput) bookingPinInput.value = '';
+    if (otpAlertMessage) otpAlertMessage.style.display = 'none';
+    if (pinAlertMessage) pinAlertMessage.style.display = 'none';
+
+    // Deselect radio buttons
+    document.querySelectorAll('.payment-radio').forEach(radio => {
+      radio.checked = false;
+    });
+
+    // Reset wizard view back to step 1
+    showStep(1);
+
     generateSeatsGrid(bus);
     bookingModal.style.display = 'flex';
   }
@@ -321,83 +367,314 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let currentStep = 1;
+  let selectedPaymentMethod = '';
+  let generatedOtp = '';
+  let generatedPin = '';
+  let otpTimeout = null;
+  let pinTimeout = null;
+
+  function showStep(stepNumber) {
+    currentStep = stepNumber;
+    
+    // Hide all step containers
+    if (bookingSeatStep) bookingSeatStep.style.display = 'none';
+    if (bookingPaymentMethodStep) bookingPaymentMethodStep.style.display = 'none';
+    if (bookingAccountStep) bookingAccountStep.style.display = 'none';
+    if (bookingOtpStep) bookingOtpStep.style.display = 'none';
+    if (bookingPinStep) bookingPinStep.style.display = 'none';
+    if (bookingSuccessStep) bookingSuccessStep.style.display = 'none';
+
+    // Hide fixed banners by default and clear active timeouts
+    clearTimeout(otpTimeout);
+    clearTimeout(pinTimeout);
+    if (otpDummyContainer) {
+      otpDummyContainer.style.opacity = '0';
+      otpDummyContainer.style.display = 'none';
+    }
+    if (pinDummyContainer) {
+      pinDummyContainer.style.opacity = '0';
+      pinDummyContainer.style.display = 'none';
+    }
+
+    // Show active step container
+    if (stepNumber === 1) {
+      if (bookingSeatStep) bookingSeatStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'Select Seat & Book';
+    } else if (stepNumber === 2) {
+      if (bookingPaymentMethodStep) bookingPaymentMethodStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'Payment Method';
+      const selectedRadio = document.querySelector('.payment-radio:checked');
+      if (payMethodNextBtn) payMethodNextBtn.disabled = !selectedRadio;
+    } else if (stepNumber === 3) {
+      if (bookingAccountStep) bookingAccountStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'Account Information';
+      const displayMethod = selectedPaymentMethod === 'Bkash' ? 'bKash' : selectedPaymentMethod;
+      if (accountInputLabel) {
+        accountInputLabel.textContent = `Enter your ${displayMethod} Account Number:`;
+      }
+      if (accountNextBtn) accountNextBtn.disabled = !bookingAccountInput.value.trim();
+    } else if (stepNumber === 4) {
+      if (bookingOtpStep) bookingOtpStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'OTP Verification';
+      if (bookingOtpInput) bookingOtpInput.value = '';
+      if (otpAlertMessage) otpAlertMessage.style.display = 'none';
+      if (otpNextBtn) otpNextBtn.disabled = true;
+      sendOtp();
+    } else if (stepNumber === 5) {
+      if (bookingPinStep) bookingPinStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'PIN Verification';
+      const displayMethod = selectedPaymentMethod === 'Bkash' ? 'bKash' : selectedPaymentMethod;
+      if (pinInputLabel) {
+        pinInputLabel.textContent = `Enter your ${displayMethod} PIN:`;
+      }
+      if (bookingPinInput) bookingPinInput.value = '';
+      if (pinAlertMessage) pinAlertMessage.style.display = 'none';
+      if (pinNextBtn) pinNextBtn.disabled = true;
+      sendPin();
+    } else if (stepNumber === 6) {
+      if (bookingSuccessStep) bookingSuccessStep.style.display = 'flex';
+      if (bookingModalTitleText) bookingModalTitleText.textContent = 'Booking Confirmed';
+    }
+  }
+
+  function sendOtp() {
+    clearTimeout(otpTimeout);
+    generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
+    if (otpDummyValue) otpDummyValue.textContent = generatedOtp;
+    if (otpDummyContainer) {
+      otpDummyContainer.style.display = 'block';
+      // Force layout reflow before opacity change to trigger transition animation
+      otpDummyContainer.offsetHeight;
+      otpDummyContainer.style.opacity = '1';
+    }
+    otpTimeout = setTimeout(() => {
+      if (otpDummyContainer) otpDummyContainer.style.opacity = '0';
+    }, 5000);
+  }
+
+  function sendPin() {
+    clearTimeout(pinTimeout);
+    generatedPin = String(Math.floor(1000 + Math.random() * 9000));
+    if (pinDummyValue) pinDummyValue.textContent = generatedPin;
+    if (pinDummyContainer) {
+      pinDummyContainer.style.display = 'block';
+      // Force layout reflow before opacity change to trigger transition animation
+      pinDummyContainer.offsetHeight;
+      pinDummyContainer.style.opacity = '1';
+    }
+    pinTimeout = setTimeout(() => {
+      if (pinDummyContainer) pinDummyContainer.style.opacity = '0';
+    }, 5000);
+  }
+
+  function executeFinalBooking() {
+    if (!selectedBus || selectedSeats.length === 0) return;
+
+    const seatsStr = selectedSeats.join(', ');
+
+    // Compile current booked seats list
+    let currentBookedList = [];
+    if (selectedBus.bookedSeats !== undefined && selectedBus.bookedSeats !== null && selectedBus.bookedSeats.trim() !== '') {
+      currentBookedList = selectedBus.bookedSeats.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      currentBookedList = getBookedSeatsList(selectedBus);
+    }
+
+    // Combine existing bookings with new selections
+    const newBookedList = [...currentBookedList, ...selectedSeats];
+    newBookedList.sort();
+    const newBookedSeatsStr = newBookedList.join(', ');
+    const newAvailableSeats = Math.max(0, 40 - newBookedList.length);
+
+    // Prepare updated bus data
+    const updatedBusData = {
+      id: selectedBus.id,
+      operator: selectedBus.operator,
+      busType: selectedBus.busType,
+      departureTime: selectedBus.departureTime,
+      fare: selectedBus.fare,
+      availableSeats: newAvailableSeats,
+      fromDistrict: selectedBus.fromDistrict,
+      toDistrict: selectedBus.toDistrict,
+      bookedSeats: newBookedSeatsStr
+    };
+
+    // Call backend PUT API to update the seats
+    fetch(`${apiBase}/api/bus/${selectedBus.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updatedBusData)
+    })
+    .then(async response => {
+      const isJson = response.headers.get('content-type')?.includes('application/json');
+      const data = isJson ? await response.json() : null;
+      if (response.ok) {
+        return data;
+      } else {
+        const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+        throw new Error(errMsg);
+      }
+    })
+    .then(data => {
+      showToast(`🎟️ Tickets booked successfully! Seats: ${seatsStr} on ${selectedBus.operator}.`, 'success');
+      
+      // Update local object properties to match the database update
+      selectedBus.bookedSeats = newBookedSeatsStr;
+      selectedBus.availableSeats = newAvailableSeats;
+      selectedBus.dbAvailableSeats = newAvailableSeats;
+      selectedBus.userBookedSeats = [];
+
+      // Transition to Step 6
+      showStep(6);
+
+      // Re-render listings
+      renderBuses(currentBuses);
+    })
+    .catch(error => {
+      console.error('Error booking ticket:', error);
+      showToast(`❌ Booking failed: ${error.message}`, 'danger');
+    });
+  }
+
+  // Close booking modal and clear timeouts
   if (closeBookingModalBtn) {
     closeBookingModalBtn.addEventListener('click', () => {
+      if (otpDummyContainer) {
+        otpDummyContainer.style.opacity = '0';
+        otpDummyContainer.style.display = 'none';
+      }
+      if (pinDummyContainer) {
+        pinDummyContainer.style.opacity = '0';
+        pinDummyContainer.style.display = 'none';
+      }
       if (bookingModal) bookingModal.style.display = 'none';
     });
   }
 
+  // Step 1: Confirm Booking transition to Step 2
   if (confirmBookingBtn) {
     confirmBookingBtn.addEventListener('click', () => {
-      if (!selectedBus || selectedSeats.length === 0) return;
+      showStep(2);
+    });
+  }
 
-      const seatsStr = selectedSeats.join(', ');
-      const seatsCount = selectedSeats.length;
+  // Step 2 Listeners
+  if (payMethodNextBtn) {
+    payMethodNextBtn.addEventListener('click', () => {
+      showStep(3);
+    });
+  }
+  if (payMethodPrevBtn) {
+    payMethodPrevBtn.addEventListener('click', () => {
+      showStep(1);
+    });
+  }
 
-      // Compile current booked seats list
-      let currentBookedList = [];
-      if (selectedBus.bookedSeats !== undefined && selectedBus.bookedSeats !== null && selectedBus.bookedSeats.trim() !== '') {
-        currentBookedList = selectedBus.bookedSeats.split(',').map(s => s.trim()).filter(Boolean);
-      } else {
-        currentBookedList = getBookedSeatsList(selectedBus);
+  // Radio selection change listener
+  document.querySelectorAll('.payment-radio').forEach(radio => {
+    radio.addEventListener('change', () => {
+      selectedPaymentMethod = radio.value;
+      if (payMethodNextBtn) payMethodNextBtn.disabled = false;
+    });
+  });
+
+  // Step 3 Listeners
+  if (accountNextBtn) {
+    accountNextBtn.addEventListener('click', () => {
+      showStep(4);
+    });
+  }
+  if (accountPrevBtn) {
+    accountPrevBtn.addEventListener('click', () => {
+      showStep(2);
+    });
+  }
+  if (bookingAccountInput) {
+    bookingAccountInput.addEventListener('input', () => {
+      if (accountNextBtn) {
+        accountNextBtn.disabled = !bookingAccountInput.value.trim();
       }
+    });
+  }
 
-      // Combine existing bookings with new selections
-      const newBookedList = [...currentBookedList, ...selectedSeats];
-      newBookedList.sort();
-      const newBookedSeatsStr = newBookedList.join(', ');
-      const newAvailableSeats = Math.max(0, 40 - newBookedList.length);
-
-      // Prepare updated bus data
-      const updatedBusData = {
-        id: selectedBus.id,
-        operator: selectedBus.operator,
-        busType: selectedBus.busType,
-        departureTime: selectedBus.departureTime,
-        fare: selectedBus.fare,
-        availableSeats: newAvailableSeats,
-        fromDistrict: selectedBus.fromDistrict,
-        toDistrict: selectedBus.toDistrict,
-        bookedSeats: newBookedSeatsStr
-      };
-
-      // Call backend PUT API to update the seats
-      fetch(`${apiBase}/api/bus/${selectedBus.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedBusData)
-      })
-      .then(async response => {
-        const isJson = response.headers.get('content-type')?.includes('application/json');
-        const data = isJson ? await response.json() : null;
-        if (response.ok) {
-          return data;
-        } else {
-          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
-          throw new Error(errMsg);
+  // Step 4 Listeners
+  if (otpNextBtn) {
+    otpNextBtn.addEventListener('click', () => {
+      const enteredOtp = bookingOtpInput.value.trim();
+      if (enteredOtp === generatedOtp) {
+        if (otpAlertMessage) otpAlertMessage.style.display = 'none';
+        showStep(5);
+      } else {
+        if (otpAlertMessage) {
+          otpAlertMessage.textContent = '❌ Incorrect OTP. Please try again.';
+          otpAlertMessage.style.display = 'block';
         }
-      })
-      .then(data => {
-        showToast(`🎟️ Tickets booked successfully! Seats: ${seatsStr} on ${selectedBus.operator}.`, 'success');
-        
-        // Update local object properties to match the database update
-        selectedBus.bookedSeats = newBookedSeatsStr;
-        selectedBus.availableSeats = newAvailableSeats;
-        selectedBus.dbAvailableSeats = newAvailableSeats;
-        selectedBus.userBookedSeats = []; // reset local additions since it has been deducted in DB!
+        bookingOtpInput.value = '';
+        otpNextBtn.disabled = true;
+        sendOtp();
+      }
+    });
+  }
+  if (otpPrevBtn) {
+    otpPrevBtn.addEventListener('click', () => {
+      showStep(3);
+    });
+  }
+  if (bookingOtpInput) {
+    bookingOtpInput.addEventListener('input', () => {
+      if (otpAlertMessage) otpAlertMessage.style.display = 'none';
+      if (otpNextBtn) {
+        otpNextBtn.disabled = !bookingOtpInput.value.trim();
+      }
+    });
+  }
 
-        // Close modal
-        if (bookingModal) bookingModal.style.display = 'none';
+  // Step 5 Listeners
+  if (pinNextBtn) {
+    pinNextBtn.addEventListener('click', () => {
+      const enteredPin = bookingPinInput.value.trim();
+      if (enteredPin === generatedPin) {
+        if (pinAlertMessage) pinAlertMessage.style.display = 'none';
+        executeFinalBooking();
+      } else {
+        if (pinAlertMessage) {
+          pinAlertMessage.textContent = '❌ Incorrect PIN. Please try again.';
+          pinAlertMessage.style.display = 'block';
+        }
+        bookingPinInput.value = '';
+        pinNextBtn.disabled = true;
+        sendPin();
+      }
+    });
+  }
+  if (pinPrevBtn) {
+    pinPrevBtn.addEventListener('click', () => {
+      showStep(4);
+    });
+  }
+  if (bookingPinInput) {
+    bookingPinInput.addEventListener('input', () => {
+      if (pinAlertMessage) pinAlertMessage.style.display = 'none';
+      if (pinNextBtn) {
+        pinNextBtn.disabled = !bookingPinInput.value.trim();
+      }
+    });
+  }
 
-        // Re-render listings
-        renderBuses(currentBuses);
-      })
-      .catch(error => {
-        console.error('Error booking ticket:', error);
-        showToast(`❌ Booking failed: ${error.message}`, 'danger');
-      });
+  if (successCloseBtn) {
+    successCloseBtn.addEventListener('click', () => {
+      if (otpDummyContainer) {
+        otpDummyContainer.style.opacity = '0';
+        otpDummyContainer.style.display = 'none';
+      }
+      if (pinDummyContainer) {
+        pinDummyContainer.style.opacity = '0';
+        pinDummyContainer.style.display = 'none';
+      }
+      if (bookingModal) bookingModal.style.display = 'none';
     });
   }
 

@@ -1507,7 +1507,7 @@ html:has(.signin-page), html:has(.signup-page), html:has(.index-page) {
 }
 
 .modal-card {
-  background: rgba(13, 18, 36, 0.75) !important;
+  background: rgba(7, 10, 19, 0.55) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -1522,4 +1522,10 @@ html:has(.signin-page), html:has(.signup-page), html:has(.index-page) {
 @keyframes modalScaleIn {
   from { transform: scale(0.92); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* Bright styling for payment wizard input placeholders */
+.payment-input::placeholder {
+  color: rgba(255, 255, 255, 0.65) !important;
+  opacity: 1 !important;
 }
