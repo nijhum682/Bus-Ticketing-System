@@ -127,6 +127,38 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        // Create Bookings table if it doesn't exist
+        await context.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS `Bookings` (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `UserEmail` VARCHAR(100) NOT NULL,
+                `BusId` INT NOT NULL,
+                `BusName` VARCHAR(100) NOT NULL,
+                `FromDistrict` VARCHAR(100) NOT NULL,
+                `ToDistrict` VARCHAR(100) NOT NULL,
+                `JourneyDate` VARCHAR(50) NOT NULL,
+                `Seats` VARCHAR(100) NOT NULL,
+                `PaymentMethod` VARCHAR(50) NOT NULL,
+                `TicketIssuingTime` DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+        Console.WriteLine("Successfully verified or created Bookings table.");
+
+        var bookingsCount = await context.Bookings.CountAsync();
+        Console.WriteLine($"[Startup] Total Bookings in DB: {bookingsCount}");
+        var allB = await context.Bookings.ToListAsync();
+        foreach (var b in allB)
+        {
+            Console.WriteLine($" - ID: {b.Id}, UserEmail: {b.UserEmail}, Bus: {b.BusName}, Seats: {b.Seats}, JourneyDate: {b.JourneyDate}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error verifying/creating Bookings table: " + ex.Message);
+    }
+
+    try
+    {
         // 4. Create Buses table if it doesn't exist
         await context.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS `Buses` (

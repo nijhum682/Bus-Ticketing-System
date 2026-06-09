@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </span>
         </div>
 
-        <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 48px; padding: 0; font-size: 0.98rem; font-weight: 700; width: 100%; border-radius: 50px; margin-top: 0.35rem; letter-spacing: 0.3px;">Book Ticket</button>
+        <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 48px; padding: 0; font-size: 0.95rem; font-weight: 700; width: 100%; max-width: 220px; margin: 0.5rem auto 0 auto; justify-content: center; letter-spacing: 0.3px;">Book Ticket</button>
       `;
 
       card.querySelector('.book-btn').addEventListener('click', () => {
@@ -521,6 +521,32 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(data => {
       showToast(`🎟️ Tickets booked successfully! Seats: ${seatsStr} on ${selectedBus.operator}.`, 'success');
       
+      // Log booking history to database
+      const bookingData = {
+        userEmail: localStorage.getItem('userEmail') || '',
+        busId: selectedBus.id,
+        busName: selectedBus.operator,
+        fromDistrict: selectedBus.fromDistrict,
+        toDistrict: selectedBus.toDistrict,
+        journeyDate: dateVal,
+        seats: seatsStr,
+        paymentMethod: selectedPaymentMethod
+      };
+
+      fetch(`${apiBase}/api/booking`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bookingData)
+      })
+      .then(res => {
+        if (!res.ok) console.error('Failed to log booking history.');
+      })
+      .catch(err => {
+        console.error('Error logging booking:', err);
+      });
+
       // Update local object properties to match the database update
       selectedBus.bookedSeats = newBookedSeatsStr;
       selectedBus.availableSeats = newAvailableSeats;

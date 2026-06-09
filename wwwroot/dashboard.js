@@ -101,6 +101,158 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadProfile();
 
+  // --- Journey History ---
+  const journeyHistoryContainer = document.getElementById('journeyHistoryContainer');
+
+  function loadJourneyHistory() {
+    if (!userEmail || !journeyHistoryContainer) return;
+
+    fetch(`${apiBase}/api/booking/user?email=${encodeURIComponent(userEmail)}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Could not fetch journey history from database.');
+        }
+        return response.json();
+      })
+      .then(bookings => {
+        journeyHistoryContainer.innerHTML = '';
+        if (bookings.length === 0) {
+          journeyHistoryContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 1.5rem 0; font-size: 0.9rem;">No journeys booked yet.</div>';
+          return;
+        }
+
+        bookings.forEach(booking => {
+          const card = document.createElement('div');
+          card.style.background = 'rgba(255, 255, 255, 0.02)';
+          card.style.border = '1px solid var(--border-color)';
+          card.style.borderRadius = 'var(--border-radius-sm)';
+          card.style.padding = '1rem';
+          card.style.display = 'flex';
+          card.style.flexDirection = 'column';
+          card.style.gap = '0.75rem';
+          card.style.transition = 'all var(--transition-fast)';
+
+          // Hover effect
+          card.addEventListener('mouseenter', () => {
+            card.style.borderColor = 'var(--accent-secondary)';
+            card.style.background = 'rgba(6, 182, 212, 0.05)';
+          });
+          card.addEventListener('mouseleave', () => {
+            card.style.borderColor = 'var(--border-color)';
+            card.style.background = 'rgba(255, 255, 255, 0.02)';
+          });
+
+          // Header: Bus Name & Payment Method Badge
+          const header = document.createElement('div');
+          header.style.display = 'flex';
+          header.style.justifyContent = 'space-between';
+          header.style.alignItems = 'center';
+          
+          const busNameEl = document.createElement('span');
+          busNameEl.style.fontWeight = '700';
+          busNameEl.style.color = 'var(--text-primary)';
+          busNameEl.style.fontSize = '0.95rem';
+          busNameEl.textContent = booking.busName;
+
+          const paymentBadge = document.createElement('span');
+          paymentBadge.style.fontSize = '0.75rem';
+          paymentBadge.style.fontWeight = '600';
+          paymentBadge.style.padding = '0.2rem 0.6rem';
+          paymentBadge.style.borderRadius = '4px';
+          paymentBadge.style.textTransform = 'uppercase';
+          
+          const payMethod = (booking.paymentMethod || '').toLowerCase();
+          if (payMethod === 'bkash') {
+            paymentBadge.style.background = 'rgba(219, 39, 119, 0.15)';
+            paymentBadge.style.color = '#db2777'; // Pink Bkash color
+            paymentBadge.textContent = 'bKash';
+          } else if (payMethod === 'nagad') {
+            paymentBadge.style.background = 'rgba(249, 115, 22, 0.15)';
+            paymentBadge.style.color = '#f97316'; // Orange Nagad color
+            paymentBadge.textContent = 'Nagad';
+          } else if (payMethod === 'rocket') {
+            paymentBadge.style.background = 'rgba(147, 51, 234, 0.15)';
+            paymentBadge.style.color = '#a855f7'; // Purple Rocket color
+            paymentBadge.textContent = 'Rocket';
+          } else {
+            paymentBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+            paymentBadge.style.color = '#3b82f6'; // Blue Card color
+            paymentBadge.textContent = booking.paymentMethod || 'Card';
+          }
+
+          header.appendChild(busNameEl);
+          header.appendChild(paymentBadge);
+          card.appendChild(header);
+
+          // Divider
+          const hr = document.createElement('div');
+          hr.style.height = '1px';
+          hr.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.08)';
+          card.appendChild(hr);
+
+          // Details grid
+          const grid = document.createElement('div');
+          grid.style.display = 'grid';
+          grid.style.gridTemplateColumns = '1.2fr 0.8fr';
+          grid.style.gap = '0.5rem';
+          grid.style.fontSize = '0.82rem';
+
+          // Route
+          const routeVal = document.createElement('div');
+          routeVal.style.color = 'var(--text-primary)';
+          routeVal.style.fontWeight = '500';
+          routeVal.innerHTML = `<span style="color: var(--text-secondary);">Route:</span> ${booking.fromDistrict} ➔ ${booking.toDistrict}`;
+          grid.appendChild(routeVal);
+
+          // Seats
+          const seatsVal = document.createElement('div');
+          seatsVal.style.color = 'var(--text-primary)';
+          seatsVal.style.fontWeight = '500';
+          seatsVal.style.textAlign = 'right';
+          seatsVal.innerHTML = `<span style="color: var(--text-secondary);">Seats:</span> <strong style="color: var(--accent-secondary);">${booking.seats}</strong>`;
+          grid.appendChild(seatsVal);
+
+          // Journey Date
+          const dateVal = document.createElement('div');
+          dateVal.style.color = 'var(--text-primary)';
+          dateVal.style.fontWeight = '500';
+          dateVal.innerHTML = `<span style="color: var(--text-secondary);">Journey Date:</span> ${booking.journeyDate}`;
+          grid.appendChild(dateVal);
+
+          // Ticket Issue Time
+          const issueTimeVal = document.createElement('div');
+          issueTimeVal.style.color = 'var(--text-secondary)';
+          issueTimeVal.style.textAlign = 'right';
+          issueTimeVal.style.fontSize = '0.78rem';
+          
+          if (booking.ticketIssuingTime) {
+            const issueDate = new Date(booking.ticketIssuingTime);
+            // Format nice short date & time
+            const formattedTime = issueDate.toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            });
+            issueTimeVal.innerHTML = `<span style="color: var(--text-muted); font-size: 0.72rem;">Issued:</span> ${formattedTime}`;
+          } else {
+            issueTimeVal.textContent = '';
+          }
+          grid.appendChild(issueTimeVal);
+
+          card.appendChild(grid);
+          journeyHistoryContainer.appendChild(card);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching journey history:', error);
+        journeyHistoryContainer.innerHTML = `<div style="text-align: center; color: var(--danger); padding: 1rem 0; font-size: 0.9rem;">❌ Failed to load journey history.</div>`;
+      });
+  }
+
+  loadJourneyHistory();
+
   // --- Profile Update Dialog ---
   const updateProfileBtn = document.getElementById('updateProfileBtn');
   const profileModal = document.getElementById('profileModal');

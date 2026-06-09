@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Database Systems Project: Travello Bus Ticketing and Reservation System. Admin Control Dashboard.">
   <title>Travello - Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=35">
+  <link rel="stylesheet" href="styles.css?v=42">
   <style>
     /* Custom Admin Dashboard Elements */
     .admin-section-title {
@@ -50,7 +50,8 @@
     }
 
     .admin-table th {
-      background: rgba(20, 27, 47, 0.45);
+      background: #0f1322;
+      background-clip: padding-box;
       color: var(--text-primary);
       font-weight: 600;
       position: sticky;
@@ -464,7 +465,7 @@
                 <tr>
                   <th>Operator</th>
                   <th>Type</th>
-                  <th>Route (From âž” To)</th>
+                  <th>Route (From &rarr; To)</th>
                   <th>Departure Time</th>
                   <th>Fare</th>
                   <th>Available Seats</th>
@@ -485,8 +486,8 @@
               Showing 0-0 of 0 buses
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <button id="busPrevPageBtn" style="padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.85rem; transition: all 0.2s;">â—€ Prev</button>
-              <button id="busNextPageBtn" style="padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.85rem; transition: all 0.2s;">Next â–¶</button>
+              <button id="busPrevPageBtn" style="padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.85rem; transition: all 0.2s;">&#9664; Prev</button>
+              <button id="busNextPageBtn" style="padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.85rem; transition: all 0.2s;">Next &#9654;</button>
             </div>
           </div>
           
