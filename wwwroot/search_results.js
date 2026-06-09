@@ -497,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
       availableSeats: newAvailableSeats,
       fromDistrict: selectedBus.fromDistrict,
       toDistrict: selectedBus.toDistrict,
+      journeyDate: selectedBus.journeyDate || '',
       bookedSeats: newBookedSeatsStr
     };
 
@@ -553,6 +554,10 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedBus.availableSeats = newAvailableSeats;
       selectedBus.dbAvailableSeats = newAvailableSeats;
       selectedBus.userBookedSeats = [];
+      // Clear payment inputs to prevent browser password managers from triggering
+      if (bookingAccountInput) bookingAccountInput.value = '';
+      if (bookingOtpInput) bookingOtpInput.value = '';
+      if (bookingPinInput) bookingPinInput.value = '';
 
       // Transition to Step 6
       showStep(6);

@@ -61,6 +61,11 @@ namespace BusTicketingBackend.Controllers
                 .OrderByDescending(b => b.TicketIssuingTime)
                 .ToListAsync();
 
+            foreach (var b in bookings)
+            {
+                b.TicketIssuingTime = DateTime.SpecifyKind(b.TicketIssuingTime, DateTimeKind.Utc);
+            }
+
             return Ok(bookings);
         }
 
@@ -100,7 +105,7 @@ namespace BusTicketingBackend.Controllers
                     b.Id,
                     Username = user != null ? user.Username : b.UserEmail,
                     b.JourneyDate,
-                    IssueDate = b.TicketIssuingTime,
+                    IssueDate = DateTime.SpecifyKind(b.TicketIssuingTime, DateTimeKind.Utc),
                     b.BusName,
                     b.Seats,
                     b.PaymentMethod,

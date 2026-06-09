@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const busTableBody = document.getElementById('busTableBody');
   const busSearchInput = document.getElementById('busSearchInput');
   const bookingTableBody = document.getElementById('bookingTableBody');
+  const adminBusDateFilter = document.getElementById('adminBusDateFilter');
+  const busJourneyDateInput = document.getElementById('busJourneyDateInput');
+  const clearAdminBusDateBtn = document.getElementById('clearAdminBusDateBtn');
   
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
@@ -222,8 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   loadUsers();
   loadNotices();
-  loadBuses();
   loadBookings();
+
+  // Initialize datepicker default value and load buses
+  if (adminBusDateFilter) {
+    setTimeout(() => {
+      toggleClearDateBtn();
+      loadBuses();
+    }, 50);
+  } else if (busTableBody) {
+    busTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">Please select a date first to view the bus database.</td></tr>';
+  }
 
   // --- Profile Update Dialog ---
   const updateProfileBtn = document.getElementById('updateProfileBtn');
@@ -677,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (totalBuses === 0) {
-      busTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No buses found.</td></tr>`;
+      busTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No buses found for this date. Click Add New Bus to create one.</td></tr>`;
       updatePaginationControls(0, 0, 0);
       return;
     }
@@ -763,9 +775,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function toggleClearDateBtn() {
+    if (!clearAdminBusDateBtn) return;
+    if (adminBusDateFilter && adminBusDateFilter.value) {
+      clearAdminBusDateBtn.style.display = 'inline-flex';
+    } else {
+      clearAdminBusDateBtn.style.display = 'none';
+    }
+  }
+
   function loadBuses() {
     if (!busTableBody) return;
-    fetch(`${apiBase}/api/bus`)
+    const dateVal = adminBusDateFilter ? adminBusDateFilter.value : '';
+    if (!dateVal) {
+      busTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">Please select a date first to view the bus database.</td></tr>';
+      updatePaginationControls(0, 0, 0);
+      return;
+    }
+    
+    // Show Loading state while database is prepared
+    busTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;"><div class="loading-spinner"></div> Loading, please wait while database is being prepared...</td></tr>';
+    updatePaginationControls(0, 0, 0);
+
+    fetch(`${apiBase}/api/bus?date=${encodeURIComponent(dateVal)}`)
       .then(response => {
         if (!response.ok) throw new Error('Failed to load buses from database.');
         return response.json();
@@ -1607,6 +1639,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (busDepartureTimeInput) busDepartureTimeInput.value = '';
       if (busAvailableSeatsInput) busAvailableSeatsInput.value = '40';
       if (busFareInput) busFareInput.value = '';
+      if (busJourneyDateInput) {
+        busJourneyDateInput.value = adminBusDateFilter ? adminBusDateFilter.value : '';
+      }
       if (busModalTitleText) busModalTitleText.textContent = 'Add New Bus';
       if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'none';
       seatPlanInitialized = false;
@@ -1636,6 +1671,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (busDepartureTimeInput) busDepartureTimeInput.value = bus.departureTime || '';
       if (busAvailableSeatsInput) busAvailableSeatsInput.value = bus.availableSeats;
       if (busFareInput) busFareInput.value = bus.fare;
+      if (busJourneyDateInput) busJourneyDateInput.value = bus.journeyDate || '';
       if (busModalTitleText) busModalTitleText.textContent = 'Edit Bus Info';
       if (adminSeatPlanWrapper) adminSeatPlanWrapper.style.display = 'none';
       seatPlanInitialized = false;
@@ -1685,8 +1721,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const departureTime = busDepartureTimeInput ? busDepartureTimeInput.value.trim() : '';
       const availableSeats = busAvailableSeatsInput ? parseInt(busAvailableSeatsInput.value, 10) : 40;
       const fare = busFareInput ? parseInt(busFareInput.value, 10) : 0;
+      const journeyDate = busJourneyDateInput ? busJourneyDateInput.value.trim() : '';
 
-      if (!operator || !busType || !fromDistrict || !toDistrict || !departureTime || isNaN(availableSeats) || isNaN(fare)) {
+      if (!operator || !busType || !fromDistrict || !toDistrict || !departureTime || !journeyDate || isNaN(availableSeats) || isNaN(fare)) {
         showToast('⚠️ Please fill out all required fields.', 'warning');
         return;
       }
@@ -1722,6 +1759,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fromDistrict,
         toDistrict,
         departureTime,
+        journeyDate,
         availableSeats,
         fare,
         bookedSeats
@@ -1857,6 +1895,43 @@ document.addEventListener('DOMContentLoaded', () => {
       disableMobile: true,
       minDate: "today",
       maxDate: maxSelectableDate
+    });
+  }
+
+  let adminBusDatePicker = null;
+  if (adminBusDateFilter && typeof flatpickr !== 'undefined') {
+    adminBusDatePicker = flatpickr(adminBusDateFilter, {
+      dateFormat: "d/m/y",
+      allowInput: true,
+      placeholder: "Select date to load database...",
+      disableMobile: true,
+      defaultDate: "today",
+      onChange: (selectedDates, dateStr) => {
+        toggleClearDateBtn();
+        loadBuses();
+      }
+    });
+  }
+
+  if (clearAdminBusDateBtn) {
+    clearAdminBusDateBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (adminBusDatePicker) {
+        adminBusDatePicker.clear();
+      } else if (adminBusDateFilter) {
+        adminBusDateFilter.value = '';
+      }
+      toggleClearDateBtn();
+      loadBuses();
+    });
+  }
+
+  if (busJourneyDateInput && typeof flatpickr !== 'undefined') {
+    flatpickr(busJourneyDateInput, {
+      dateFormat: "d/m/y",
+      allowInput: true,
+      placeholder: "Select Journey Date...",
+      disableMobile: true
     });
   }
 

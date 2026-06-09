@@ -538,6 +538,23 @@
             Bus Database Management
           </div>
 
+          <!-- Bus Database Date Filter -->
+          <div class="form-group" style="margin-bottom: 1rem; position: relative;">
+            <label class="form-label" for="adminBusDateFilter" style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 500;">Select Date to View Buses</label>
+            <div style="position: relative;">
+              <input type="text" id="adminBusDateFilter" class="form-input" placeholder="Select date (dd/mm/yy) to load database..." readonly style="background: rgba(13, 18, 36, 0.3); height: 44px; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); outline: none; padding: 0 1rem; padding-right: 3.5rem; width: 100%; cursor: pointer;" required>
+              <button type="button" id="clearAdminBusDateBtn" style="position: absolute; right: 2.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: none; font-size: 1.35rem; align-items: center; justify-content: center; width: 24px; height: 24px; z-index: 10; padding: 0;" title="Clear date">&times;</button>
+              <div style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; display: flex; align-items: center; color: var(--text-secondary);">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <!-- Bus Search -->
           <div class="admin-search-container">
             <input type="text" id="busSearchInput" class="admin-search-input" placeholder="Search buses by operator, route, type, fare, departure time...">
@@ -903,6 +920,12 @@
             <option value="AC">AC</option>
             <option value="Sleeper Class">Sleeper Class</option>
           </select>
+        </div>
+
+        <!-- Journey Date -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="busJourneyDateInput" style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 500;">Journey Date</label>
+          <input type="text" id="busJourneyDateInput" class="form-input" placeholder="Select Journey Date..." readonly style="background: rgba(13, 18, 36, 0.3); height: 44px; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); outline: none; padding: 0 1rem; width: 100%; cursor: pointer;" required>
         </div>
 
         <!-- From District -->
