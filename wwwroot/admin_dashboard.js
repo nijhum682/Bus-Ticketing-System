@@ -2284,7 +2284,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cancelBtnContainer.appendChild(cancelBtn);
 
+            // Add Rate & Review or Reviewed button if completed
+            if (isJourneyCompleted) {
+              if (reviewedSet.has(booking.id)) {
+                // Render "Reviewed" button (clickable)
+                const reviewedBtn = document.createElement('button');
+                reviewedBtn.type = 'button';
+                reviewedBtn.className = 'action-btn btn-secondary';
+                reviewedBtn.style.padding = '0.4rem 1.2rem';
+                reviewedBtn.style.fontSize = '0.8rem';
+                reviewedBtn.style.height = '34px';
+                reviewedBtn.style.borderRadius = 'var(--border-radius-sm)';
+                reviewedBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+                reviewedBtn.style.color = '#10b981';
+                reviewedBtn.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+                reviewedBtn.style.fontWeight = '600';
+                reviewedBtn.style.marginLeft = '0.5rem';
+                reviewedBtn.style.cursor = 'pointer';
+                reviewedBtn.style.transition = 'all var(--transition-fast)';
+                reviewedBtn.textContent = 'Reviewed';
 
+                reviewedBtn.addEventListener('mouseenter', () => {
+                  reviewedBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+                });
+                reviewedBtn.addEventListener('mouseleave', () => {
+                  reviewedBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+                });
+
+                reviewedBtn.addEventListener('click', () => {
+                  openViewReviewModal(booking);
+                });
+
+                cancelBtnContainer.appendChild(reviewedBtn);
+              } else {
+                // Render clickable "Rate & Review" button
+                const reviewBtn = document.createElement('button');
+                reviewBtn.type = 'button';
+                reviewBtn.className = 'action-btn btn-primary';
+                reviewBtn.style.padding = '0.4rem 1.2rem';
+                reviewBtn.style.fontSize = '0.8rem';
+                reviewBtn.style.height = '34px';
+                reviewBtn.style.borderRadius = 'var(--border-radius-sm)';
+                reviewBtn.style.marginLeft = '0.5rem';
+                reviewBtn.style.background = 'rgba(6, 182, 212, 0.1)';
+                reviewBtn.style.color = 'var(--accent-secondary)';
+                reviewBtn.style.borderColor = 'rgba(6, 182, 212, 0.25)';
+                reviewBtn.style.fontWeight = '600';
+                reviewBtn.style.cursor = 'pointer';
+                reviewBtn.style.transition = 'all var(--transition-fast)';
+                reviewBtn.textContent = 'Rate & Review';
+
+                reviewBtn.addEventListener('mouseenter', () => {
+                  reviewBtn.style.background = 'var(--accent-secondary)';
+                  reviewBtn.style.color = '#0d1224';
+                  reviewBtn.style.borderColor = 'var(--accent-secondary)';
+                });
+                reviewBtn.addEventListener('mouseleave', () => {
+                  reviewBtn.style.background = 'rgba(6, 182, 212, 0.1)';
+                  reviewBtn.style.color = 'var(--accent-secondary)';
+                  reviewBtn.style.borderColor = 'rgba(6, 182, 212, 0.25)';
+                });
+
+                reviewBtn.addEventListener('click', () => {
+                  openReviewModal(booking);
+                });
+
+                cancelBtnContainer.appendChild(reviewBtn);
+              }
+            }
 
             card.appendChild(cancelBtnContainer);
             journeyHistoryContainer.appendChild(card);

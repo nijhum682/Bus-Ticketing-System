@@ -44,7 +44,18 @@ namespace BusTicketingBackend.Controllers
                 .ToListAsync();
 
             return Ok(reviewedIds);
-        }            return Ok(review);
+        }
+
+        // GET: api/review/booking/{bookingId}
+        [HttpGet("booking/{bookingId}")]
+        public async Task<ActionResult<Review>> GetReviewByBookingId(int bookingId)
+        {
+            var review = await _context.Reviews.FirstOrDefaultAsync(r => r.BookingId == bookingId);
+            if (review == null)
+            {
+                return NotFound(new { message = "Review not found for this booking." });
+            }
+            return Ok(review);
         }
 
         // POST: api/review

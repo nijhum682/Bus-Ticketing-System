@@ -403,8 +403,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     reviewedBtn.style.transition = 'all var(--transition-fast)';
                     reviewedBtn.textContent = 'Reviewed';
 
-                    reviewedBtn.style.cursor = 'not-allowed';
-                    reviewedBtn.disabled = true;
+                    reviewedBtn.addEventListener('mouseenter', () => {
+                      reviewedBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+                    });
+                    reviewedBtn.addEventListener('mouseleave', () => {
+                      reviewedBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+                    });
+
+                    reviewedBtn.addEventListener('click', () => {
+                      openViewReviewModal(booking);
+                    });
+
                     cancelBtnContainer.appendChild(reviewedBtn);
                   } else {
                     // Render clickable "Rate & Review" button
