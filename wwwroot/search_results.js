@@ -61,6 +61,35 @@ document.addEventListener('DOMContentLoaded', () => {
     ? ''
     : `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname === 'file:' || !window.location.hostname ? 'localhost' : window.location.hostname}:5080`;
 
+  function parseJourneyDateTime(dateStr, timeStr) {
+    try {
+      if (!dateStr) return null;
+      // Format: DD/MM/YY
+      const dateParts = dateStr.split('/');
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1; // 0-indexed
+      const year = 2000 + parseInt(dateParts[2], 10);
+
+      if (!timeStr) timeStr = '12:00 PM';
+      // Format: HH:MM AM/PM
+      const timeParts = timeStr.trim().split(' ');
+      const hm = timeParts[0].split(':');
+      let hours = parseInt(hm[0], 10);
+      const minutes = parseInt(hm[1], 10);
+      const ampm = timeParts[1].toUpperCase();
+
+      if (ampm === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      return new Date(year, month, day, hours, minutes, 0, 0);
+    } catch (e) {
+      return null;
+    }
+  }
+
   let currentBuses = [];
   let selectedBus = null;
   let selectedSeats = [];
@@ -201,6 +230,25 @@ document.addEventListener('DOMContentLoaded', () => {
         card.style.background = 'rgba(20, 27, 47, 0.08)';
       });
 
+      // Check if departure time has passed (on today's date) or if no seats are left
+      const journeyTime = parseJourneyDateTime(bus.journeyDate || dateVal, bus.departureTime);
+      const now = new Date();
+      const isOver = journeyTime && journeyTime <= now;
+      const isSoldOut = bus.availableSeats <= 0;
+      const isClosed = isOver || isSoldOut;
+
+      let btnClass = 'action-btn btn-primary book-btn';
+      let btnStyle = 'height: 48px; padding: 0; font-size: 0.95rem; font-weight: 700; width: 250px; margin: 0.75rem auto 0 auto; justify-content: center; letter-spacing: 0.3px;';
+      let btnDisabled = '';
+      let btnText = 'Book Ticket';
+
+      if (isClosed) {
+        btnClass = 'action-btn book-btn';
+        btnStyle += ' background: rgba(255, 255, 255, 0.08) !important; color: rgba(255, 255, 255, 0.35) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; cursor: not-allowed !important; opacity: 0.6 !important; box-shadow: none !important;';
+        btnDisabled = 'disabled';
+        btnText = isSoldOut ? 'Sold Out' : 'Booking Closed';
+      }
+
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; text-align: left;">
           <div>
@@ -224,12 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
           </span>
         </div>
 
-        <button type="button" class="action-btn btn-primary book-btn" data-id="${bus.id}" style="height: 48px; padding: 0; font-size: 0.95rem; font-weight: 700; width: 250px; margin: 0.75rem auto 0 auto; justify-content: center; letter-spacing: 0.3px;">Book Ticket</button>
+        <button type="button" class="${btnClass}" data-id="${bus.id}" style="${btnStyle}" ${btnDisabled}>${btnText}</button>
       `;
 
-      card.querySelector('.book-btn').addEventListener('click', () => {
-        openBookingModal(bus);
-      });
+      if (!isClosed) {
+        card.querySelector('.book-btn').addEventListener('click', () => {
+          openBookingModal(bus);
+        });
+      }
 
       busListingsContainer.appendChild(card);
     });
