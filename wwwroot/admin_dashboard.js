@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const noticeNumberInput = document.getElementById('noticeNumberInput');
   const noticeTitleInput = document.getElementById('noticeTitleInput');
   const noticeContentInput = document.getElementById('noticeContentInput');
+
+  // --- Admin Reviews Audit board variables ---
+  let reviewCurrentPage = 1;
+  const reviewPageSize = 5;
+  let allReviews = [];
+  let reviewedSet = new Set();
+
+  const viewReviewsBtn = document.getElementById('viewReviewsBtn');
+  const adminReviewsContainer = document.getElementById('adminReviewsContainer');
+  const reviewsTableBody = document.getElementById('reviewsTableBody');
+  const prevReviewsBtn = document.getElementById('prevReviewsBtn');
+  const nextReviewsBtn = document.getElementById('nextReviewsBtn');
+  const reviewsPageIndicator = document.getElementById('reviewsPageIndicator');
   const noticeSubmitBtn = document.getElementById('noticeSubmitBtn');
   const submitBtnText = document.getElementById('submitBtnText');
   const cancelEditBtn = document.getElementById('cancelEditBtn');
@@ -148,9 +161,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- API Setup ---
-  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-    ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
-    : '';
+  const apiBase = (window.location.port === '5080' || window.location.port === '7234')
+    ? ''
+    : `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname === 'file:' || !window.location.hostname ? 'localhost' : window.location.hostname}:5080`;
 
   let currentUser = null;
   let allRegisteredUsers = [];
@@ -226,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUsers();
   loadNotices();
   loadBookings();
+  loadReviews();
+  fetchReviewedAndLoadHistory();
 
   // Initialize datepicker default value and load buses
   if (adminBusDateFilter) {
@@ -528,6 +543,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         renderUsers(users);
+        if (typeof renderReviewsPage === 'function') {
+          renderReviewsPage();
+        }
       })
       .catch(error => {
         console.error(error);
@@ -2195,6 +2213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const depTime = booking.departureTime || '12:00 PM';
             const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
             const now = new Date();
+            let isJourneyCompleted = false;
 
             if (booking.status === "Cancelled") {
               cancelBtn.disabled = true;
@@ -2205,6 +2224,7 @@ document.addEventListener('DOMContentLoaded', () => {
               cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
               cancelBtn.textContent = 'Cancelled';
             } else if (journeyTime && journeyTime <= now) {
+              isJourneyCompleted = true;
               cancelBtn.disabled = true;
               cancelBtn.style.opacity = '0.85';
               cancelBtn.style.cursor = 'not-allowed';
@@ -2263,8 +2283,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             cancelBtnContainer.appendChild(cancelBtn);
-            card.appendChild(cancelBtnContainer);
 
+
+
+            card.appendChild(cancelBtnContainer);
             journeyHistoryContainer.appendChild(card);
           } catch (err) {
             console.error('Error rendering journey booking card:', err, booking);
@@ -2355,4 +2377,345 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load journey history initially
   loadJourneyHistory();
+
+  // --- Admin Reviews Audit board (Paginated & Username-mapped) ---
+  // Expose loadReviews globally so it can be called initially
+  window.loadReviews = loadReviews;
+
+  function loadReviews() {
+    if (!reviewsTableBody) return;
+    reviewsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">Loading journey reviews...</td></tr>';
+
+    fetch(`${apiBase}/api/review`)
+      .then(response => {
+        if (!response.ok) throw new Error(`Failed to load reviews. Status: ${response.status}`);
+        return response.json();
+      })
+      .then(reviews => {
+        allReviews = reviews;
+        reviewCurrentPage = 1;
+        renderReviewsPage();
+      })
+      .catch(error => {
+        console.error('[ReviewsBoard] Load error:', error);
+        reviewsTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">❌ Error loading reviews: ${error.message}</td></tr>`;
+      });
+  }
+
+  function renderReviewsPage() {
+    if (!reviewsTableBody) return;
+
+    if (allReviews.length === 0) {
+      reviewsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No reviews submitted yet.</td></tr>';
+      if (reviewsPageIndicator) reviewsPageIndicator.textContent = 'Page 1 of 1';
+      if (prevReviewsBtn) prevReviewsBtn.disabled = true;
+      if (nextReviewsBtn) nextReviewsBtn.disabled = true;
+      return;
+    }
+
+    const totalPages = Math.ceil(allReviews.length / reviewPageSize);
+    if (reviewCurrentPage < 1) reviewCurrentPage = 1;
+    if (reviewCurrentPage > totalPages) reviewCurrentPage = totalPages;
+
+    // Update pagination controls
+    if (prevReviewsBtn) prevReviewsBtn.disabled = (reviewCurrentPage === 1);
+    if (nextReviewsBtn) nextReviewsBtn.disabled = (reviewCurrentPage === totalPages);
+    if (reviewsPageIndicator) reviewsPageIndicator.textContent = `Page ${reviewCurrentPage} of ${totalPages}`;
+
+    reviewsTableBody.innerHTML = '';
+    const startIndex = (reviewCurrentPage - 1) * reviewPageSize;
+    const pageReviews = allReviews.slice(startIndex, startIndex + reviewPageSize);
+
+    pageReviews.forEach((review, idx) => {
+      try {
+        const tr = document.createElement('tr');
+        
+        // Map user email to username
+        const matchedUser = allRegisteredUsers.find(u => u.email.toLowerCase() === review.userEmail.toLowerCase());
+        const displayUsername = matchedUser ? matchedUser.username : review.userEmail;
+
+        // Build rating star string (★★★★★ format)
+        const ratingVal = review.rating || 0;
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+          if (i <= ratingVal) {
+            starsHtml += '<span style="color: #eab308; font-size: 1.1rem; text-shadow: 0 0 5px rgba(234, 179, 8, 0.4);">★</span>';
+          } else {
+            starsHtml += '<span style="color: rgba(255,255,255,0.15); font-size: 1.1rem;">★</span>';
+          }
+        }
+
+        // Format timestamp
+        let createdDate = 'N/A';
+        if (review.createdAt) {
+          const d = new Date(review.createdAt);
+          createdDate = d.toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+        }
+
+        tr.innerHTML = `
+          <td style="color: var(--text-primary); font-weight: 500;">${escapeHtml(displayUsername)}</td>
+          <td><span class="role-badge user">${escapeHtml(review.busOperator)}</span></td>
+          <td>${escapeHtml(review.route)}</td>
+          <td>${escapeHtml(review.journeyDate)}</td>
+          <td style="white-space: nowrap;">${starsHtml}</td>
+          <td style="max-width: 280px; word-wrap: break-word; white-space: normal; color: var(--text-primary);">${escapeHtml(review.comment)}</td>
+          <td>${createdDate}</td>
+        `;
+        reviewsTableBody.appendChild(tr);
+      } catch (err) {
+        console.error(`[ReviewsBoard] Error rendering review index ${startIndex + idx}:`, err, review);
+      }
+    });
+  }
+
+  // Bind pagination buttons
+  if (prevReviewsBtn) {
+    prevReviewsBtn.addEventListener('click', () => {
+      if (reviewCurrentPage > 1) {
+        reviewCurrentPage--;
+        renderReviewsPage();
+      }
+    });
+  }
+
+  if (nextReviewsBtn) {
+    nextReviewsBtn.addEventListener('click', () => {
+      const totalPages = Math.ceil(allReviews.length / reviewPageSize);
+      if (reviewCurrentPage < totalPages) {
+        reviewCurrentPage++;
+        renderReviewsPage();
+      }
+    });
+  }
+
+  // Bind Toggle Display Button
+  if (viewReviewsBtn && adminReviewsContainer) {
+    viewReviewsBtn.addEventListener('click', () => {
+      if (adminReviewsContainer.style.display === 'none') {
+        adminReviewsContainer.style.display = 'block';
+        viewReviewsBtn.textContent = 'Hide Reviews';
+      } else {
+        adminReviewsContainer.style.display = 'none';
+        viewReviewsBtn.textContent = 'View Reviews';
+      }
+    });
+  }
+
+  // Fetch reviewed booking IDs for the current user, then load journey history
+  function fetchReviewedAndLoadHistory() {
+    if (!userEmail) return;
+    fetch(`${apiBase}/api/review/user/reviewed?email=${encodeURIComponent(userEmail)}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(reviewedBookingIds => {
+        reviewedSet = new Set(reviewedBookingIds);
+        loadJourneyHistory();
+      })
+      .catch(err => {
+        console.error('Error fetching reviewed booking IDs:', err);
+        loadJourneyHistory();
+      });
+  }
+  window.fetchReviewedAndLoadHistory = fetchReviewedAndLoadHistory;
+
+  // --- Rating & Review Modal Interactivity ---
+  const reviewModal = document.getElementById('reviewModal');
+  const reviewBusDetails = document.getElementById('reviewBusDetails');
+  const reviewCommentInput = document.getElementById('reviewCommentInput');
+  const submitReviewBtn = document.getElementById('submitReviewBtn');
+  const closeReviewModalBtn = document.getElementById('closeReviewModalBtn');
+  const starContainer = document.getElementById('starContainer');
+  let selectedRating = 0;
+  let activeReviewBooking = null;
+
+  // Star hover and click handlers
+  if (starContainer) {
+    const stars = starContainer.querySelectorAll('.star-rating');
+    
+    stars.forEach(star => {
+      // Hover highlight
+      star.addEventListener('mouseenter', () => {
+        const val = parseInt(star.getAttribute('data-value'), 10);
+        highlightStars(val);
+      });
+
+      // Mouse leave (restore selected rating)
+      star.addEventListener('mouseleave', () => {
+        highlightStars(selectedRating);
+      });
+
+      // Click to select
+      star.addEventListener('click', () => {
+        selectedRating = parseInt(star.getAttribute('data-value'), 10);
+        highlightStars(selectedRating);
+      });
+    });
+
+    function highlightStars(count) {
+      stars.forEach(s => {
+        const val = parseInt(s.getAttribute('data-value'), 10);
+        if (val <= count) {
+          s.style.color = '#eab308'; // Gold star color
+        } else {
+          s.style.color = 'rgba(255, 255, 255, 0.15)'; // Grey star color
+        }
+      });
+    }
+  }
+
+  function openReviewModal(booking) {
+    if (!reviewModal) return;
+    activeReviewBooking = booking;
+    selectedRating = 0;
+    if (reviewCommentInput) reviewCommentInput.value = '';
+    
+    if (reviewBusDetails) {
+      reviewBusDetails.innerHTML = `<strong style="color: var(--accent-secondary);">${booking.busName}</strong><br>Route: ${booking.fromDistrict} ➔ ${booking.toDistrict}<br>Journey Date: ${booking.journeyDate}`;
+    }
+    
+    // Reset stars
+    if (starContainer) {
+      const stars = starContainer.querySelectorAll('.star-rating');
+      stars.forEach(s => s.style.color = 'rgba(255, 255, 255, 0.15)');
+    }
+    
+    reviewModal.style.display = 'flex';
+  }
+
+  if (closeReviewModalBtn && reviewModal) {
+    closeReviewModalBtn.addEventListener('click', () => {
+      reviewModal.style.display = 'none';
+      activeReviewBooking = null;
+    });
+  }
+
+  if (submitReviewBtn) {
+    submitReviewBtn.addEventListener('click', () => {
+      if (!activeReviewBooking) return;
+      
+      const rating = selectedRating;
+      const comment = reviewCommentInput ? reviewCommentInput.value.trim() : '';
+      
+      if (rating === 0) {
+        showToast('⚠️ Please select a rating (1 to 5 stars).', 'warning');
+        return;
+      }
+      
+      if (!comment) {
+        showToast('⚠️ Please write a review comment.', 'warning');
+        return;
+      }
+
+      const reviewData = {
+        bookingId: activeReviewBooking.id,
+        rating: rating,
+        comment: comment
+      };
+
+      submitReviewBtn.disabled = true;
+      submitReviewBtn.textContent = 'Submitting...';
+
+      fetch(`${apiBase}/api/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reviewData)
+      })
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
+        if (response.ok) {
+          return data;
+        } else {
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
+        }
+      })
+      .then(data => {
+        showToast('🎉 Thank you! Your review has been submitted successfully.', 'success');
+        if (reviewModal) reviewModal.style.display = 'none';
+        
+        // Refresh reviewed booking list and reload history & reviews board
+        fetchReviewedAndLoadHistory();
+        if (typeof loadReviews === 'function') {
+          loadReviews();
+        }
+      })
+      .catch(error => {
+        showToast(`❌ Error: ${error.message}`, 'danger');
+      })
+      .finally(() => {
+        submitReviewBtn.disabled = false;
+        submitReviewBtn.textContent = 'Submit Review';
+        activeReviewBooking = null;
+      });
+    });
+  }
+
+  // --- Read-Only View Review Modal ---
+  const viewReviewModal = document.getElementById('viewReviewModal');
+  const viewReviewBusDetails = document.getElementById('viewReviewBusDetails');
+  const viewReviewCommentInput = document.getElementById('viewReviewCommentInput');
+  const closeViewReviewModalBtn = document.getElementById('closeViewReviewModalBtn');
+  const viewStarContainer = document.getElementById('viewStarContainer');
+
+  function openViewReviewModal(booking) {
+    if (!viewReviewModal) return;
+    
+    if (viewReviewBusDetails) {
+      viewReviewBusDetails.innerHTML = `<strong style="color: var(--accent-secondary);">${booking.busName}</strong><br>Route: ${booking.fromDistrict} ➔ ${booking.toDistrict}<br>Journey Date: ${booking.journeyDate}`;
+    }
+    
+    if (viewReviewCommentInput) {
+      viewReviewCommentInput.value = 'Loading review details...';
+    }
+    
+    // Reset stars
+    if (viewStarContainer) {
+      const stars = viewStarContainer.querySelectorAll('.view-star');
+      stars.forEach(s => s.style.color = 'rgba(255, 255, 255, 0.15)');
+    }
+    
+    viewReviewModal.style.display = 'flex';
+    
+    fetch(`${apiBase}/api/review/booking/${booking.id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Could not fetch review details.');
+        return res.json();
+      })
+      .then(review => {
+        if (viewReviewCommentInput) {
+          viewReviewCommentInput.value = review.comment || '';
+        }
+        if (viewStarContainer) {
+          const stars = viewStarContainer.querySelectorAll('.view-star');
+          const ratingVal = review.rating || 0;
+          stars.forEach(s => {
+            const val = parseInt(s.getAttribute('data-value'), 10);
+            if (val <= ratingVal) {
+              s.style.color = '#eab308'; // Gold star color
+            } else {
+              s.style.color = 'rgba(255, 255, 255, 0.15)'; // Grey star color
+            }
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching review:', err);
+        if (viewReviewCommentInput) {
+          viewReviewCommentInput.value = 'Failed to load review: ' + err.message;
+        }
+      });
+  }
+
+  if (closeViewReviewModalBtn && viewReviewModal) {
+    closeViewReviewModalBtn.addEventListener('click', () => {
+      viewReviewModal.style.display = 'none';
+    });
+  }
 });
+
