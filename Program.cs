@@ -176,6 +176,29 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        // Create Reviews table if it doesn't exist
+        await context.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS `Reviews` (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `BookingId` INT NOT NULL,
+                `UserEmail` VARCHAR(100) NOT NULL,
+                `BusOperator` VARCHAR(100) NOT NULL,
+                `Route` VARCHAR(200) NOT NULL,
+                `JourneyDate` VARCHAR(50) NOT NULL,
+                `Rating` INT NOT NULL,
+                `Comment` VARCHAR(1000) NOT NULL,
+                `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+        Console.WriteLine("Successfully verified or created Reviews table.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error verifying/creating Reviews table: " + ex.Message);
+    }
+
+    try
+    {
         // 4. Create Buses table if it doesn't exist
         await context.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS `Buses` (

@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // API Call for Sign In
-      const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-        ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
-        : '';
+      const apiBase = (window.location.port === '5080' || window.location.port === '7234')
+        ? ''
+        : `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname === 'file:' || !window.location.hostname ? 'localhost' : window.location.hostname}:5080`;
 
       fetch(`${apiBase}/api/auth/signin`, {
         method: 'POST',

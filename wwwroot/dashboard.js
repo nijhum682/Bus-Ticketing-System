@@ -64,9 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- API Setup & Fetch Profile ---
-  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-    ? (['5080', '7234'].includes(window.location.port) ? '' : 'http://localhost:5080')
-    : '';
+  const apiBase = (window.location.port === '5080' || window.location.port === '7234')
+    ? ''
+    : `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname === 'file:' || !window.location.hostname ? 'localhost' : window.location.hostname}:5080`;
 
   let currentUser = null;
 
@@ -139,244 +139,317 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadJourneyHistory() {
     if (!userEmail || !journeyHistoryContainer) return;
 
-    fetch(`${apiBase}/api/booking/user?email=${encodeURIComponent(userEmail)}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Could not fetch journey history from database.');
-        }
-        return response.json();
+    fetch(`${apiBase}/api/review/user/reviewed?email=${encodeURIComponent(userEmail)}`)
+      .then(res => {
+        if (!res.ok) return [];
+        return res.json();
       })
-      .then(bookings => {
-        journeyHistoryContainer.innerHTML = '';
-        if (bookings.length === 0) {
-          journeyHistoryContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 1.5rem 0; font-size: 0.9rem;">No journeys booked yet.</div>';
-          return;
-        }
+      .then(reviewedBookingIds => {
+        const reviewedSet = new Set(reviewedBookingIds);
 
-        bookings.forEach(booking => {
-          try {
-            const card = document.createElement('div');
-          card.style.background = 'rgba(255, 255, 255, 0.02)';
-          card.style.border = '1px solid var(--border-color)';
-          card.style.borderRadius = 'var(--border-radius-sm)';
-          card.style.padding = '1rem';
-          card.style.display = 'flex';
-          card.style.flexDirection = 'column';
-          card.style.gap = '0.75rem';
-          card.style.transition = 'all var(--transition-fast)';
+        return fetch(`${apiBase}/api/booking/user?email=${encodeURIComponent(userEmail)}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Could not fetch journey history from database.');
+            }
+            return response.json();
+          })
+          .then(bookings => {
+            journeyHistoryContainer.innerHTML = '';
+            if (bookings.length === 0) {
+              journeyHistoryContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 1.5rem 0; font-size: 0.9rem;">No journeys booked yet.</div>';
+              return;
+            }
 
-          // Hover effect
-          card.addEventListener('mouseenter', () => {
-            card.style.borderColor = 'var(--accent-secondary)';
-            card.style.background = 'rgba(6, 182, 212, 0.05)';
-          });
-          card.addEventListener('mouseleave', () => {
-            card.style.borderColor = 'var(--border-color)';
-            card.style.background = 'rgba(255, 255, 255, 0.02)';
-          });
+            bookings.forEach(booking => {
+              try {
+                const card = document.createElement('div');
+                card.style.background = 'rgba(255, 255, 255, 0.02)';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = 'var(--border-radius-sm)';
+                card.style.padding = '1rem';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '0.75rem';
+                card.style.transition = 'all var(--transition-fast)';
 
-          // Header: Bus Name & Payment Method Badge
-          const header = document.createElement('div');
-          header.style.display = 'flex';
-          header.style.justifyContent = 'space-between';
-          header.style.alignItems = 'center';
-          
-          const busNameEl = document.createElement('span');
-          busNameEl.style.fontWeight = '700';
-          busNameEl.style.color = 'var(--text-primary)';
-          busNameEl.style.fontSize = '0.95rem';
-          busNameEl.textContent = booking.busName;
+                // Hover effect
+                card.addEventListener('mouseenter', () => {
+                  card.style.borderColor = 'var(--accent-secondary)';
+                  card.style.background = 'rgba(6, 182, 212, 0.05)';
+                });
+                card.addEventListener('mouseleave', () => {
+                  card.style.borderColor = 'var(--border-color)';
+                  card.style.background = 'rgba(255, 255, 255, 0.02)';
+                });
 
-          const paymentBadge = document.createElement('span');
-          paymentBadge.style.fontSize = '0.75rem';
-          paymentBadge.style.fontWeight = '600';
-          paymentBadge.style.padding = '0.2rem 0.6rem';
-          paymentBadge.style.borderRadius = '4px';
-          paymentBadge.style.textTransform = 'uppercase';
-          
-          const payMethod = (booking.paymentMethod || '').toLowerCase();
-          if (payMethod === 'bkash') {
-            paymentBadge.style.background = 'rgba(219, 39, 119, 0.15)';
-            paymentBadge.style.color = '#db2777'; // Pink Bkash color
-            paymentBadge.textContent = 'bKash';
-          } else if (payMethod === 'nagad') {
-            paymentBadge.style.background = 'rgba(249, 115, 22, 0.15)';
-            paymentBadge.style.color = '#f97316'; // Orange Nagad color
-            paymentBadge.textContent = 'Nagad';
-          } else if (payMethod === 'rocket') {
-            paymentBadge.style.background = 'rgba(147, 51, 234, 0.15)';
-            paymentBadge.style.color = '#a855f7'; // Purple Rocket color
-            paymentBadge.textContent = 'Rocket';
-          } else {
-            paymentBadge.style.background = 'rgba(59, 130, 246, 0.15)';
-            paymentBadge.style.color = '#3b82f6'; // Blue Card color
-            paymentBadge.textContent = booking.paymentMethod || 'Card';
-          }
+                // Header: Bus Name & Payment Method Badge
+                const header = document.createElement('div');
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+                
+                const busNameEl = document.createElement('span');
+                busNameEl.style.fontWeight = '700';
+                busNameEl.style.color = 'var(--text-primary)';
+                busNameEl.style.fontSize = '0.95rem';
+                busNameEl.textContent = booking.busName;
 
-          header.appendChild(busNameEl);
-          header.appendChild(paymentBadge);
-          card.appendChild(header);
-
-          // Divider
-          const hr = document.createElement('div');
-          hr.style.height = '1px';
-          hr.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.08)';
-          card.appendChild(hr);
-
-          // Details grid
-          const grid = document.createElement('div');
-          grid.style.display = 'grid';
-          grid.style.gridTemplateColumns = '1.2fr 0.8fr';
-          grid.style.gap = '0.5rem';
-          grid.style.fontSize = '0.82rem';
-
-          // Route
-          const routeVal = document.createElement('div');
-          routeVal.style.color = 'var(--text-primary)';
-          routeVal.style.fontWeight = '500';
-          routeVal.innerHTML = `<span style="color: var(--text-secondary);">Route:</span> ${booking.fromDistrict} ➔ ${booking.toDistrict}`;
-          grid.appendChild(routeVal);
-
-          // Seats
-          const seatsVal = document.createElement('div');
-          seatsVal.style.color = 'var(--text-primary)';
-          seatsVal.style.fontWeight = '500';
-          seatsVal.style.textAlign = 'right';
-          seatsVal.innerHTML = `<span style="color: var(--text-secondary);">Seats:</span> <strong style="color: var(--accent-secondary);">${booking.seats}</strong>`;
-          grid.appendChild(seatsVal);
-
-          // Journey Date
-          const dateVal = document.createElement('div');
-          dateVal.style.color = 'var(--text-primary)';
-          dateVal.style.fontWeight = '500';
-          dateVal.innerHTML = `<span style="color: var(--text-secondary);">Journey Date:</span> ${booking.journeyDate}`;
-          grid.appendChild(dateVal);
-
-          // Ticket Issue Time
-          const issueTimeVal = document.createElement('div');
-          issueTimeVal.style.color = 'var(--text-secondary)';
-          issueTimeVal.style.textAlign = 'right';
-          issueTimeVal.style.fontSize = '0.78rem';
-          
-          if (booking.ticketIssuingTime) {
-            const issueDate = new Date(booking.ticketIssuingTime);
-            // Format nice short date & time
-            const formattedTime = issueDate.toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            });
-            issueTimeVal.innerHTML = `<span style="color: var(--text-muted); font-size: 0.72rem;">Issued:</span> ${formattedTime}`;
-          } else {
-            issueTimeVal.textContent = '';
-          }
-          grid.appendChild(issueTimeVal);
-
-          card.appendChild(grid);
-
-          // Cancel Booking Button
-          const cancelBtnContainer = document.createElement('div');
-          cancelBtnContainer.style.marginTop = '0.75rem';
-          cancelBtnContainer.style.display = 'flex';
-          cancelBtnContainer.style.justifyContent = 'flex-end';
-
-          const cancelBtn = document.createElement('button');
-          cancelBtn.type = 'button';
-          cancelBtn.className = 'action-btn btn-secondary';
-          cancelBtn.style.padding = '0.4rem 1.2rem';
-          cancelBtn.style.fontSize = '0.8rem';
-          cancelBtn.style.height = '34px';
-          cancelBtn.style.borderRadius = 'var(--border-radius-sm)';
-          cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
-          cancelBtn.style.color = 'var(--danger)';
-          cancelBtn.style.border = '1px solid rgba(239, 68, 68, 0.25)';
-          cancelBtn.style.fontWeight = '600';
-          cancelBtn.style.cursor = 'pointer';
-          cancelBtn.style.transition = 'all var(--transition-fast)';
-          cancelBtn.textContent = 'Cancel Booking';
-
-          const depTime = booking.departureTime || '12:00 PM';
-          const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
-          const now = new Date();
-
-          if (booking.status === "Cancelled") {
-            cancelBtn.disabled = true;
-            cancelBtn.style.opacity = '0.85';
-            cancelBtn.style.cursor = 'not-allowed';
-            cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
-            cancelBtn.style.color = 'var(--danger)';
-            cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-            cancelBtn.textContent = 'Cancelled';
-          } else if (journeyTime && journeyTime <= now) {
-            cancelBtn.disabled = true;
-            cancelBtn.style.opacity = '0.85';
-            cancelBtn.style.cursor = 'not-allowed';
-            cancelBtn.style.background = 'rgba(255, 255, 255, 0.08)';
-            cancelBtn.style.color = 'rgba(255, 255, 255, 0.65)';
-            cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            cancelBtn.textContent = 'Journey Completed';
-          } else {
-            cancelBtn.addEventListener('mouseenter', () => {
-              cancelBtn.style.background = 'var(--danger)';
-              cancelBtn.style.color = '#ffffff';
-              cancelBtn.style.borderColor = 'var(--danger)';
-              cancelBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
-            });
-            cancelBtn.addEventListener('mouseleave', () => {
-              cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
-              cancelBtn.style.color = 'var(--danger)';
-              cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-              cancelBtn.style.boxShadow = 'none';
-            });
-          }
-
-          cancelBtn.addEventListener('click', () => {
-            // Client-side 12-hour limit check
-            const depTime = booking.departureTime || '12:00 PM';
-            const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
-            if (journeyTime) {
-              const now = new Date();
-              const timeDiffMs = journeyTime - now;
-              const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-
-              if (timeDiffHours < 12) {
-                const cancelWarningModal = document.getElementById('cancelWarningModal');
-                if (cancelWarningModal) {
-                  cancelWarningModal.style.display = 'flex';
+                const paymentBadge = document.createElement('span');
+                paymentBadge.style.fontSize = '0.75rem';
+                paymentBadge.style.fontWeight = '600';
+                paymentBadge.style.padding = '0.2rem 0.6rem';
+                paymentBadge.style.borderRadius = '4px';
+                paymentBadge.style.textTransform = 'uppercase';
+                
+                const payMethod = (booking.paymentMethod || '').toLowerCase();
+                if (payMethod === 'bkash') {
+                  paymentBadge.style.background = 'rgba(219, 39, 119, 0.15)';
+                  paymentBadge.style.color = '#db2777'; // Pink Bkash color
+                  paymentBadge.textContent = 'bKash';
+                } else if (payMethod === 'nagad') {
+                  paymentBadge.style.background = 'rgba(249, 115, 22, 0.15)';
+                  paymentBadge.style.color = '#f97316'; // Orange Nagad color
+                  paymentBadge.textContent = 'Nagad';
+                } else if (payMethod === 'rocket') {
+                  paymentBadge.style.background = 'rgba(147, 51, 234, 0.15)';
+                  paymentBadge.style.color = '#a855f7'; // Purple Rocket color
+                  paymentBadge.textContent = 'Rocket';
                 } else {
-                  alert("Cancellation is only allowed at least 12 hours before the journey departure time.");
+                  paymentBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+                  paymentBadge.style.color = '#3b82f6'; // Blue Card color
+                  paymentBadge.textContent = booking.paymentMethod || 'Card';
                 }
-                showToast("❌ Cancellation is only allowed at least 12 hours before departure.", "danger");
-                return;
-              }
-            }
 
-            // Custom Confirm Dialog
-            bookingToCancel = booking;
-            const cancelConfirmModal = document.getElementById('cancelConfirmModal');
-            const cancelConfirmMessage = document.getElementById('cancelConfirmMessage');
-            if (cancelConfirmModal) {
-              if (cancelConfirmMessage) {
-                cancelConfirmMessage.textContent = `Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`;
+                header.appendChild(busNameEl);
+                header.appendChild(paymentBadge);
+                card.appendChild(header);
+
+                // Divider
+                const hr = document.createElement('div');
+                hr.style.height = '1px';
+                hr.style.borderBottom = '1px dashed rgba(255, 255, 255, 0.08)';
+                card.appendChild(hr);
+
+                // Details grid
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = '1.2fr 0.8fr';
+                grid.style.gap = '0.5rem';
+                grid.style.fontSize = '0.82rem';
+
+                // Route
+                const routeVal = document.createElement('div');
+                routeVal.style.color = 'var(--text-primary)';
+                routeVal.style.fontWeight = '500';
+                routeVal.innerHTML = `<span style="color: var(--text-secondary);">Route:</span> ${booking.fromDistrict} ➔ ${booking.toDistrict}`;
+                grid.appendChild(routeVal);
+
+                // Seats
+                const seatsVal = document.createElement('div');
+                seatsVal.style.color = 'var(--text-primary)';
+                seatsVal.style.fontWeight = '500';
+                seatsVal.style.textAlign = 'right';
+                seatsVal.innerHTML = `<span style="color: var(--text-secondary);">Seats:</span> <strong style="color: var(--accent-secondary);">${booking.seats}</strong>`;
+                grid.appendChild(seatsVal);
+
+                // Journey Date
+                const dateVal = document.createElement('div');
+                dateVal.style.color = 'var(--text-primary)';
+                dateVal.style.fontWeight = '500';
+                dateVal.innerHTML = `<span style="color: var(--text-secondary);">Journey Date:</span> ${booking.journeyDate}`;
+                grid.appendChild(dateVal);
+
+                // Ticket Issue Time
+                const issueTimeVal = document.createElement('div');
+                issueTimeVal.style.color = 'var(--text-secondary)';
+                issueTimeVal.style.textAlign = 'right';
+                issueTimeVal.style.fontSize = '0.78rem';
+                
+                if (booking.ticketIssuingTime) {
+                  const issueDate = new Date(booking.ticketIssuingTime);
+                  // Format nice short date & time
+                  const formattedTime = issueDate.toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  });
+                  issueTimeVal.innerHTML = `<span style="color: var(--text-muted); font-size: 0.72rem;">Issued:</span> ${formattedTime}`;
+                } else {
+                  issueTimeVal.textContent = '';
+                }
+                grid.appendChild(issueTimeVal);
+
+                card.appendChild(grid);
+
+                // Buttons Container
+                const cancelBtnContainer = document.createElement('div');
+                cancelBtnContainer.style.marginTop = '0.75rem';
+                cancelBtnContainer.style.display = 'flex';
+                cancelBtnContainer.style.justifyContent = 'flex-end';
+                cancelBtnContainer.style.alignItems = 'center';
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'action-btn btn-secondary';
+                cancelBtn.style.padding = '0.4rem 1.2rem';
+                cancelBtn.style.fontSize = '0.8rem';
+                cancelBtn.style.height = '34px';
+                cancelBtn.style.borderRadius = 'var(--border-radius-sm)';
+                cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+                cancelBtn.style.color = 'var(--danger)';
+                cancelBtn.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+                cancelBtn.style.fontWeight = '600';
+                cancelBtn.style.cursor = 'pointer';
+                cancelBtn.style.transition = 'all var(--transition-fast)';
+                cancelBtn.textContent = 'Cancel Booking';
+
+                const depTime = booking.departureTime || '12:00 PM';
+                const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+                const now = new Date();
+
+                let isJourneyCompleted = false;
+
+                if (booking.status === "Cancelled") {
+                  cancelBtn.disabled = true;
+                  cancelBtn.style.opacity = '0.85';
+                  cancelBtn.style.cursor = 'not-allowed';
+                  cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+                  cancelBtn.style.color = 'var(--danger)';
+                  cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                  cancelBtn.textContent = 'Cancelled';
+                } else if (booking.status === "Completed" || (journeyTime && journeyTime <= now)) {
+                  isJourneyCompleted = true;
+                  cancelBtn.disabled = true;
+                  cancelBtn.style.opacity = '0.85';
+                  cancelBtn.style.cursor = 'not-allowed';
+                  cancelBtn.style.background = 'rgba(255, 255, 255, 0.08)';
+                  cancelBtn.style.color = 'rgba(255, 255, 255, 0.65)';
+                  cancelBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                  cancelBtn.textContent = 'Journey Completed';
+                } else {
+                  cancelBtn.addEventListener('mouseenter', () => {
+                    cancelBtn.style.background = 'var(--danger)';
+                    cancelBtn.style.color = '#ffffff';
+                    cancelBtn.style.borderColor = 'var(--danger)';
+                    cancelBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+                  });
+                  cancelBtn.addEventListener('mouseleave', () => {
+                    cancelBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+                    cancelBtn.style.color = 'var(--danger)';
+                    cancelBtn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                    cancelBtn.style.boxShadow = 'none';
+                  });
+                }
+
+                cancelBtn.addEventListener('click', () => {
+                  // Client-side 12-hour limit check
+                  const depTime = booking.departureTime || '12:00 PM';
+                  const journeyTime = parseJourneyDateTime(booking.journeyDate, depTime);
+                  if (journeyTime) {
+                    const now = new Date();
+                    const timeDiffMs = journeyTime - now;
+                    const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+
+                    if (timeDiffHours < 12) {
+                      const cancelWarningModal = document.getElementById('cancelWarningModal');
+                      if (cancelWarningModal) {
+                        cancelWarningModal.style.display = 'flex';
+                      } else {
+                        alert("Cancellation is only allowed at least 12 hours before the journey departure time.");
+                      }
+                      showToast("❌ Cancellation is only allowed at least 12 hours before departure.", "danger");
+                      return;
+                    }
+                  }
+
+                  // Custom Confirm Dialog
+                  bookingToCancel = booking;
+                  const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+                  const cancelConfirmMessage = document.getElementById('cancelConfirmMessage');
+                  if (cancelConfirmModal) {
+                    if (cancelConfirmMessage) {
+                      cancelConfirmMessage.textContent = `Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`;
+                    }
+                    cancelConfirmModal.style.display = 'flex';
+                  } else {
+                    if (confirm(`Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`)) {
+                      executeCancellation(booking.id);
+                    }
+                  }
+                });
+
+                cancelBtnContainer.appendChild(cancelBtn);
+
+                // Add Rate & Review or Reviewed button if completed
+                if (isJourneyCompleted) {
+                  if (reviewedSet.has(booking.id)) {
+                    // Render "Reviewed" button (clickable)
+                    const reviewedBtn = document.createElement('button');
+                    reviewedBtn.type = 'button';
+                    reviewedBtn.className = 'action-btn btn-secondary';
+                    reviewedBtn.style.padding = '0.4rem 1.2rem';
+                    reviewedBtn.style.fontSize = '0.8rem';
+                    reviewedBtn.style.height = '34px';
+                    reviewedBtn.style.borderRadius = 'var(--border-radius-sm)';
+                    reviewedBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+                    reviewedBtn.style.color = '#10b981';
+                    reviewedBtn.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+                    reviewedBtn.style.fontWeight = '600';
+                    reviewedBtn.style.marginLeft = '0.5rem';
+                    reviewedBtn.style.cursor = 'pointer';
+                    reviewedBtn.style.transition = 'all var(--transition-fast)';
+                    reviewedBtn.textContent = 'Reviewed';
+
+                    reviewedBtn.style.cursor = 'not-allowed';
+                    reviewedBtn.disabled = true;
+                    cancelBtnContainer.appendChild(reviewedBtn);
+                  } else {
+                    // Render clickable "Rate & Review" button
+                    const reviewBtn = document.createElement('button');
+                    reviewBtn.type = 'button';
+                    reviewBtn.className = 'action-btn btn-primary';
+                    reviewBtn.style.padding = '0.4rem 1.2rem';
+                    reviewBtn.style.fontSize = '0.8rem';
+                    reviewBtn.style.height = '34px';
+                    reviewBtn.style.borderRadius = 'var(--border-radius-sm)';
+                    reviewBtn.style.marginLeft = '0.5rem';
+                    reviewBtn.style.background = 'rgba(6, 182, 212, 0.1)';
+                    reviewBtn.style.color = 'var(--accent-secondary)';
+                    reviewBtn.style.borderColor = 'rgba(6, 182, 212, 0.25)';
+                    reviewBtn.style.fontWeight = '600';
+                    reviewBtn.style.cursor = 'pointer';
+                    reviewBtn.style.transition = 'all var(--transition-fast)';
+                    reviewBtn.textContent = 'Rate & Review';
+
+                    reviewBtn.addEventListener('mouseenter', () => {
+                      reviewBtn.style.background = 'var(--accent-secondary)';
+                      reviewBtn.style.color = '#0d1224';
+                      reviewBtn.style.borderColor = 'var(--accent-secondary)';
+                    });
+                    reviewBtn.addEventListener('mouseleave', () => {
+                      reviewBtn.style.background = 'rgba(6, 182, 212, 0.1)';
+                      reviewBtn.style.color = 'var(--accent-secondary)';
+                      reviewBtn.style.borderColor = 'rgba(6, 182, 212, 0.25)';
+                    });
+
+                    reviewBtn.addEventListener('click', () => {
+                      openReviewModal(booking);
+                    });
+
+                    cancelBtnContainer.appendChild(reviewBtn);
+                  }
+                }
+
+                card.appendChild(cancelBtnContainer);
+                journeyHistoryContainer.appendChild(card);
+              } catch (err) {
+                console.error('Error rendering journey booking card:', err, booking);
               }
-              cancelConfirmModal.style.display = 'flex';
-            } else {
-              if (confirm(`Are you sure you want to cancel your booking for ${booking.busName} (${booking.seats})?`)) {
-                executeCancellation(booking.id);
-              }
-            }
+            });
           });
-
-          cancelBtnContainer.appendChild(cancelBtn);
-          card.appendChild(cancelBtnContainer);
-
-            journeyHistoryContainer.appendChild(card);
-          } catch (err) {
-            console.error('Error rendering journey booking card:', err, booking);
-          }
-        });
       })
       .catch(error => {
         console.error('Error fetching journey history:', error);
@@ -974,4 +1047,197 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // --- Rating & Review Modal Interactivity ---
+  const reviewModal = document.getElementById('reviewModal');
+  const reviewBusDetails = document.getElementById('reviewBusDetails');
+  const reviewCommentInput = document.getElementById('reviewCommentInput');
+  const submitReviewBtn = document.getElementById('submitReviewBtn');
+  const closeReviewModalBtn = document.getElementById('closeReviewModalBtn');
+  const starContainer = document.getElementById('starContainer');
+  let selectedRating = 0;
+  let activeReviewBooking = null;
+
+  // Star hover and click handlers
+  if (starContainer) {
+    const stars = starContainer.querySelectorAll('.star-rating');
+    
+    stars.forEach(star => {
+      // Hover highlight
+      star.addEventListener('mouseenter', () => {
+        const val = parseInt(star.getAttribute('data-value'), 10);
+        highlightStars(val);
+      });
+
+      // Mouse leave (restore selected rating)
+      star.addEventListener('mouseleave', () => {
+        highlightStars(selectedRating);
+      });
+
+      // Click to select
+      star.addEventListener('click', () => {
+        selectedRating = parseInt(star.getAttribute('data-value'), 10);
+        highlightStars(selectedRating);
+      });
+    });
+
+    function highlightStars(count) {
+      stars.forEach(s => {
+        const val = parseInt(s.getAttribute('data-value'), 10);
+        if (val <= count) {
+          s.style.color = '#eab308'; // Gold star color
+        } else {
+          s.style.color = 'rgba(255, 255, 255, 0.15)'; // Grey star color
+        }
+      });
+    }
+  }
+
+  function openReviewModal(booking) {
+    if (!reviewModal) return;
+    activeReviewBooking = booking;
+    selectedRating = 0;
+    if (reviewCommentInput) reviewCommentInput.value = '';
+    
+    if (reviewBusDetails) {
+      reviewBusDetails.innerHTML = `<strong style="color: var(--accent-secondary);">${booking.busName}</strong><br>Route: ${booking.fromDistrict} ➔ ${booking.toDistrict}<br>Journey Date: ${booking.journeyDate}`;
+    }
+    
+    // Reset stars
+    if (starContainer) {
+      const stars = starContainer.querySelectorAll('.star-rating');
+      stars.forEach(s => s.style.color = 'rgba(255, 255, 255, 0.15)');
+    }
+    
+    reviewModal.style.display = 'flex';
+  }
+
+  if (closeReviewModalBtn && reviewModal) {
+    closeReviewModalBtn.addEventListener('click', () => {
+      reviewModal.style.display = 'none';
+      activeReviewBooking = null;
+    });
+  }
+
+  if (submitReviewBtn) {
+    submitReviewBtn.addEventListener('click', () => {
+      if (!activeReviewBooking) return;
+      
+      const rating = selectedRating;
+      const comment = reviewCommentInput ? reviewCommentInput.value.trim() : '';
+      
+      if (rating === 0) {
+        showToast('⚠️ Please select a rating (1 to 5 stars).', 'warning');
+        return;
+      }
+      
+      if (!comment) {
+        showToast('⚠️ Please write a review comment.', 'warning');
+        return;
+      }
+
+      const reviewData = {
+        bookingId: activeReviewBooking.id,
+        rating: rating,
+        comment: comment
+      };
+
+      submitReviewBtn.disabled = true;
+      submitReviewBtn.textContent = 'Submitting...';
+
+      fetch(`${apiBase}/api/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reviewData)
+      })
+      .then(async response => {
+        const isJson = response.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await response.json() : null;
+        if (response.ok) {
+          return data;
+        } else {
+          const errMsg = (data && data.message) ? data.message : `Server error (${response.status})`;
+          throw new Error(errMsg);
+        }
+      })
+      .then(data => {
+        showToast('🎉 Thank you! Your review has been submitted successfully.', 'success');
+        if (reviewModal) reviewModal.style.display = 'none';
+        loadJourneyHistory(); // Reload journey history to show the "Reviewed" label
+      })
+      .catch(error => {
+        showToast(`❌ Error: ${error.message}`, 'danger');
+      })
+      .finally(() => {
+        submitReviewBtn.disabled = false;
+        submitReviewBtn.textContent = 'Submit Review';
+        activeReviewBooking = null;
+      });
+    });
+  }
+
+  // --- Read-Only View Review Modal ---
+  const viewReviewModal = document.getElementById('viewReviewModal');
+  const viewReviewBusDetails = document.getElementById('viewReviewBusDetails');
+  const viewReviewCommentInput = document.getElementById('viewReviewCommentInput');
+  const closeViewReviewModalBtn = document.getElementById('closeViewReviewModalBtn');
+  const viewStarContainer = document.getElementById('viewStarContainer');
+
+  function openViewReviewModal(booking) {
+    if (!viewReviewModal) return;
+    
+    if (viewReviewBusDetails) {
+      viewReviewBusDetails.innerHTML = `<strong style="color: var(--accent-secondary);">${booking.busName}</strong><br>Route: ${booking.fromDistrict} ➔ ${booking.toDistrict}<br>Journey Date: ${booking.journeyDate}`;
+    }
+    
+    if (viewReviewCommentInput) {
+      viewReviewCommentInput.value = 'Loading review details...';
+    }
+    
+    // Reset stars
+    if (viewStarContainer) {
+      const stars = viewStarContainer.querySelectorAll('.view-star');
+      stars.forEach(s => s.style.color = 'rgba(255, 255, 255, 0.15)');
+    }
+    
+    viewReviewModal.style.display = 'flex';
+    
+    fetch(`${apiBase}/api/review/booking/${booking.id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Could not fetch review details.');
+        return res.json();
+      })
+      .then(review => {
+        if (viewReviewCommentInput) {
+          viewReviewCommentInput.value = review.comment || '';
+        }
+        if (viewStarContainer) {
+          const stars = viewStarContainer.querySelectorAll('.view-star');
+          const ratingVal = review.rating || 0;
+          stars.forEach(s => {
+            const val = parseInt(s.getAttribute('data-value'), 10);
+            if (val <= ratingVal) {
+              s.style.color = '#eab308'; // Gold star color
+            } else {
+              s.style.color = 'rgba(255, 255, 255, 0.15)'; // Grey star color
+            }
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching review:', err);
+        if (viewReviewCommentInput) {
+          viewReviewCommentInput.value = 'Failed to load review: ' + err.message;
+        }
+      });
+  }
+
+  if (closeViewReviewModalBtn && viewReviewModal) {
+    closeViewReviewModalBtn.addEventListener('click', () => {
+      viewReviewModal.style.display = 'none';
+    });
+  }
 });
+
