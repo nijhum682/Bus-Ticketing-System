@@ -2497,9 +2497,14 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const tr = document.createElement('tr');
         
-        // Map user email to username
-        const matchedUser = allRegisteredUsers.find(u => u.email.toLowerCase() === review.userEmail.toLowerCase());
-        const displayUsername = matchedUser ? matchedUser.username : review.userEmail;
+        // Map user email to username safely
+        let displayUsername = review.userEmail || 'Unknown User';
+        if (review.userEmail && allRegisteredUsers && allRegisteredUsers.length > 0) {
+          const matchedUser = allRegisteredUsers.find(u => u.email && u.email.toLowerCase() === review.userEmail.toLowerCase());
+          if (matchedUser) {
+            displayUsername = matchedUser.username;
+          }
+        }
 
         // Build rating star string (★★★★★ format)
         const ratingVal = review.rating || 0;
