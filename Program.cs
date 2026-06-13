@@ -24,7 +24,7 @@ builder.Services.AddCors(options =>
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseOracle(connectionString));
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -53,58 +53,19 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        // 1. Add Role column to Users table if missing
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `Role` VARCHAR(50) NOT NULL DEFAULT 'User';");
-        Console.WriteLine("Successfully added 'Role' column to 'Users' table.");
+        // Automatically ensure the database and tables are created.
+        // This is clean, robust, database-agnostic, and works perfectly for Oracle.
+        await context.Database.EnsureCreatedAsync();
+        Console.WriteLine("Oracle database schema verified or created successfully.");
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-        // Ignored if column already exists
+        Console.WriteLine("Error ensuring Oracle database schema exists: " + ex.Message);
     }
 
     try
     {
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermanentDistrict` VARCHAR(100) NOT NULL DEFAULT '';");
-        Console.WriteLine("Successfully added 'PermanentDistrict' column to 'Users' table.");
-    }
-    catch (Exception) {}
-
-    try
-    {
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `Gender` VARCHAR(20) NOT NULL DEFAULT '';");
-        Console.WriteLine("Successfully added 'Gender' column to 'Users' table.");
-    }
-    catch (Exception) {}
-
-    try
-    {
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `Profession` VARCHAR(100) NOT NULL DEFAULT '';");
-        Console.WriteLine("Successfully added 'Profession' column to 'Users' table.");
-    }
-    catch (Exception) {}
-
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresArea` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresUpazilla` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresDistrict` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PresDivision` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermArea` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermUpazilla` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-    try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Users` ADD COLUMN `PermDivision` VARCHAR(100) NOT NULL DEFAULT '';"); } catch (Exception) {}
-
-    try
-    {
-        // 2. Create Notices table if it doesn't exist
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS `Notices` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `NoticeNumber` VARCHAR(10) NOT NULL,
-                `Title` VARCHAR(100) NOT NULL,
-                `Content` TEXT NOT NULL,
-                `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        ");
-
-        // 3. Seed default notices if empty
+        // Seed default notices if empty
         var anyNotices = await context.Notices.AnyAsync();
         if (!anyNotices)
         {
@@ -127,40 +88,6 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // Create Bookings table if it doesn't exist
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS `Bookings` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `UserEmail` VARCHAR(100) NOT NULL,
-                `BusId` INT NOT NULL,
-                `BusName` VARCHAR(100) NOT NULL,
-                `FromDistrict` VARCHAR(100) NOT NULL,
-                `ToDistrict` VARCHAR(100) NOT NULL,
-                `JourneyDate` VARCHAR(50) NOT NULL,
-                `Seats` VARCHAR(100) NOT NULL,
-                `PaymentMethod` VARCHAR(50) NOT NULL,
-                `TicketIssuingTime` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                `DepartureTime` VARCHAR(50) NOT NULL DEFAULT '',
-                `Status` VARCHAR(50) NOT NULL DEFAULT 'Upcoming'
-            );
-        ");
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Bookings` ADD COLUMN `DepartureTime` VARCHAR(50) NOT NULL DEFAULT '';");
-            Console.WriteLine("Successfully added 'DepartureTime' column to 'Bookings' table.");
-        }
-        catch (Exception) {}
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Bookings` ADD COLUMN `Status` VARCHAR(50) NOT NULL DEFAULT 'Upcoming';");
-            Console.WriteLine("Successfully added 'Status' column to 'Bookings' table.");
-        }
-        catch (Exception) {}
-
-        Console.WriteLine("Successfully verified or created Bookings table.");
-
         var bookingsCount = await context.Bookings.CountAsync();
         Console.WriteLine($"[Startup] Total Bookings in DB: {bookingsCount}");
         var allB = await context.Bookings.ToListAsync();
@@ -171,76 +98,19 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Error verifying/creating Bookings table: " + ex.Message);
+        Console.WriteLine("Error listing Bookings table: " + ex.Message);
     }
 
     try
     {
-        // Create Reviews table if it doesn't exist
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS `Reviews` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `BookingId` INT NOT NULL,
-                `UserEmail` VARCHAR(100) NOT NULL,
-                `BusOperator` VARCHAR(100) NOT NULL,
-                `Route` VARCHAR(200) NOT NULL,
-                `JourneyDate` VARCHAR(50) NOT NULL,
-                `Rating` INT NOT NULL,
-                `Comment` VARCHAR(1000) NOT NULL,
-                `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        ");
-        Console.WriteLine("Successfully verified or created Reviews table.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("Error verifying/creating Reviews table: " + ex.Message);
-    }
-
-    try
-    {
-        // 4. Create Buses table if it doesn't exist
-        await context.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS `Buses` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `Operator` VARCHAR(100) NOT NULL,
-                `BusType` VARCHAR(50) NOT NULL,
-                `DepartureTime` VARCHAR(50) NOT NULL,
-                `Fare` INT NOT NULL,
-                `AvailableSeats` INT NOT NULL,
-                `FromDistrict` VARCHAR(100) NOT NULL,
-                `ToDistrict` VARCHAR(100) NOT NULL,
-                `JourneyDate` VARCHAR(50) NOT NULL DEFAULT '',
-                `BookedSeats` VARCHAR(500) NOT NULL DEFAULT ''
-            );
-        ");
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Buses` ADD COLUMN `JourneyDate` VARCHAR(50) NOT NULL DEFAULT '';");
-        }
-        catch (Exception) { }
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE `Buses` ADD COLUMN `BookedSeats` VARCHAR(500) NOT NULL DEFAULT '';");
-        }
-        catch (Exception) { }
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("CREATE INDEX `IX_Buses_FromDistrict_ToDistrict` ON `Buses` (`FromDistrict`, `ToDistrict`);");
-        }
-        catch (Exception) { }
-
-        // 5. Seed default buses if empty, incomplete, or if fares need updating to distance-based calculations
+        // Seed default buses if empty, incomplete, or if fares need updating to distance-based calculations
         var busCount = await context.Buses.CountAsync();
         var firstBus = await context.Buses.FirstOrDefaultAsync();
         var needsReseed = firstBus == null || firstBus.Fare != BusTicketingBackend.Models.GeoUtils.CalculateFare(firstBus.FromDistrict, firstBus.ToDistrict, firstBus.BusType);
         if (busCount < 16100 || needsReseed)
         {
-            // Clear existing ones to prevent duplicates
-            await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE `Buses`;");
+            // Clear existing ones using EF Core ExecuteDeleteAsync (fully database agnostic)
+            await context.Buses.ExecuteDeleteAsync();
 
             var districts = new[]
             {
