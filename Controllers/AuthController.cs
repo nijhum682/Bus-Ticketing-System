@@ -40,8 +40,8 @@ namespace BusTicketingBackend.Controllers
         [HttpPost("signin")]
         public async Task<IActionResult> SignIn([FromBody] SignInModel model)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => 
-                (u.Email == model.Email || u.Username == model.Email) && u.Password == model.Password);
+            var user = (await _context.Users.Where(u => 
+                (u.Email == model.Email || u.Username == model.Email) && u.Password == model.Password).ToListAsync()).FirstOrDefault();
 
             if (user == null)
             {
@@ -59,7 +59,7 @@ namespace BusTicketingBackend.Controllers
                 return BadRequest(new { message = "Email is required." });
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == email);
+            var user = (await _context.Users.Where(u => u.Email == email || u.Username == email).ToListAsync()).FirstOrDefault();
 
             if (user == null)
             {
@@ -115,7 +115,7 @@ namespace BusTicketingBackend.Controllers
         [HttpPost("users/update")]
         public async Task<IActionResult> AdminUpdateUser([FromBody] AdminUpdateUserModel model)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            var user = (await _context.Users.Where(u => u.Username == model.Username).ToListAsync()).FirstOrDefault();
             if (user == null)
             {
                 return NotFound(new { message = "User not found." });
@@ -153,7 +153,7 @@ namespace BusTicketingBackend.Controllers
         [HttpDelete("users/{username}")]
         public async Task<IActionResult> DeleteUser(string username)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            var user = (await _context.Users.Where(u => u.Username == username).ToListAsync()).FirstOrDefault();
             if (user == null)
             {
                 return NotFound(new { message = "User not found." });
@@ -173,7 +173,7 @@ namespace BusTicketingBackend.Controllers
                 return BadRequest(new { message = "Current email is required." });
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.CurrentEmail);
+            var user = (await _context.Users.Where(u => u.Email == model.CurrentEmail).ToListAsync()).FirstOrDefault();
             if (user == null)
             {
                 return NotFound(new { message = "User not found." });

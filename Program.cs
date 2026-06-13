@@ -1,6 +1,8 @@
 using BusTicketingBackend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Oracle.EntityFrameworkCore.Infrastructure;
+
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -24,7 +26,7 @@ builder.Services.AddCors(options =>
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseOracle(connectionString));
+    options.UseOracle(connectionString, b => b.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19)));
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -105,9 +107,7 @@ using (var scope = app.Services.CreateScope())
     {
         // Seed default buses if empty, incomplete, or if fares need updating to distance-based calculations
         var busCount = await context.Buses.CountAsync();
-        var firstBus = await context.Buses.FirstOrDefaultAsync();
-        var needsReseed = firstBus == null || firstBus.Fare != BusTicketingBackend.Models.GeoUtils.CalculateFare(firstBus.FromDistrict, firstBus.ToDistrict, firstBus.BusType);
-        if (busCount < 16100 || needsReseed)
+        if (busCount < 16100)
         {
             // Clear existing ones using EF Core ExecuteDeleteAsync (fully database agnostic)
             await context.Buses.ExecuteDeleteAsync();

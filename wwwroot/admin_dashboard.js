@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bookingTableBody.innerHTML = '';
 
     if (bookingsList.length === 0) {
-      bookingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No ticket bookings found.</td></tr>`;
+      bookingTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No ticket bookings found.</td></tr>`;
       return;
     }
 
@@ -628,6 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${escapeHtml(booking.journeyDate)} (${escapeHtml(booking.departureTime)})</td>
         <td>${escapeHtml(formattedIssueDate)}</td>
         <td>${escapeHtml(booking.busName)}</td>
+        <td style="color: var(--text-secondary); font-size: 0.82rem;">${escapeHtml(booking.fromDistrict || '')} &rarr; ${escapeHtml(booking.toDistrict || '')}</td>
         <td style="font-weight: 600; color: var(--accent-secondary);">${escapeHtml(booking.seats)}</td>
         <td><span style="font-size: 0.8rem; text-transform: uppercase; font-weight: 600;">${escapeHtml(booking.paymentMethod)}</span></td>
         <td><span class="role-badge" style="${badgeStyle}">${escapeHtml(statusText)}</span></td>
@@ -655,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(error => {
         console.error(error);
-        bookingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">❌ Error loading bookings database: ${error.message}</td></tr>`;
+        bookingTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 1.5rem;">❌ Error loading bookings database: ${error.message}</td></tr>`;
       });
   }
 
@@ -677,9 +678,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const status = (booking.status || '').toLowerCase();
         const departureTime = (booking.departureTime || '').toLowerCase();
 
+        const route = ((booking.fromDistrict || '') + ' ' + (booking.toDistrict || '')).toLowerCase();
+
         return username.includes(query) ||
                busName.includes(query) ||
                journeyDate.includes(query) ||
+               route.includes(query) ||
                seats.includes(query) ||
                paymentMethod.includes(query) ||
                status.includes(query) ||

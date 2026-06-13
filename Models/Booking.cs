@@ -41,9 +41,8 @@ namespace BusTicketingBackend.Models
 
         public DateTime TicketIssuingTime { get; set; } = DateTime.UtcNow;
 
-        [Required]
         [StringLength(50)]
-        public string DepartureTime { get; set; } = string.Empty;
+        public string? DepartureTime { get; set; } = string.Empty;
 
         [Required]
         [StringLength(50)]

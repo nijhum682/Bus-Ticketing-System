@@ -107,6 +107,8 @@ namespace BusTicketingBackend.Controllers
                     b.JourneyDate,
                     IssueDate = DateTime.SpecifyKind(b.TicketIssuingTime, DateTimeKind.Utc),
                     b.BusName,
+                    b.FromDistrict,
+                    b.ToDistrict,
                     b.Seats,
                     b.PaymentMethod,
                     b.DepartureTime,

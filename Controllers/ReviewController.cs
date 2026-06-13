@@ -50,7 +50,7 @@ namespace BusTicketingBackend.Controllers
         [HttpGet("booking/{bookingId}")]
         public async Task<ActionResult<Review>> GetReviewByBookingId(int bookingId)
         {
-            var review = await _context.Reviews.FirstOrDefaultAsync(r => r.BookingId == bookingId);
+            var review = (await _context.Reviews.Where(r => r.BookingId == bookingId).ToListAsync()).FirstOrDefault();
             if (review == null)
             {
                 return NotFound(new { message = "Review not found for this booking." });
@@ -87,7 +87,7 @@ namespace BusTicketingBackend.Controllers
             // Auto-populate fields from booking just to be secure and accurate
             review.UserEmail = booking.UserEmail;
             review.BusOperator = booking.BusName;
-            review.Route = $"{booking.FromDistrict} ➔ {booking.ToDistrict}";
+            review.Route = $"{booking.FromDistrict} -> {booking.ToDistrict}";
             review.JourneyDate = booking.JourneyDate;
             review.CreatedAt = DateTime.UtcNow;
 

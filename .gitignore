@@ -8,3 +8,9 @@ obj/
 *.userosscache
 *.sln.docstates
 appsettings.Development.json
+
+# Large binary/design files - not needed in repo
+*.docx
+*.png
+scratch/
+docx_content.txt
