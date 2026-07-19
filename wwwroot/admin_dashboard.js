@@ -173,7 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
   let busCurrentPage = 1;
   const busPageSize = 50;
 
+  // --- Summary Report (calls SP_GET_SUMMARY_REPORT via /api/booking/summary) ---
+  function loadSummaryReport() {
+    fetch(`${apiBase}/api/booking/summary`)
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to load summary'))
+      .then(data => {
+        const el = id => document.getElementById(id);
+        if (el('statTotalUsers'))    el('statTotalUsers').textContent    = data.totalUsers    ?? '—';
+        if (el('statTotalBuses'))    el('statTotalBuses').textContent    = data.totalBuses    ?? '—';
+        if (el('statTotalBookings')) el('statTotalBookings').textContent = data.totalBookings ?? '—';
+        if (el('statTotalRevenue'))  el('statTotalRevenue').textContent  = data.totalRevenue  != null ? '৳' + Number(data.totalRevenue).toLocaleString() : '—';
+        if (el('statUpcoming'))      el('statUpcoming').textContent      = data.upcoming      ?? '—';
+        if (el('statCompleted'))     el('statCompleted').textContent     = data.completed     ?? '—';
+        if (el('statCancelled'))     el('statCancelled').textContent     = data.cancelled     ?? '—';
+      })
+      .catch(err => console.warn('[SummaryReport]', err));
+  }
+
   function loadProfile() {
+
     const email = localStorage.getItem('userEmail');
     if (!email) return;
 
@@ -227,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nameDisplay) nameDisplay.textContent = 'Error loading profile';
         if (emailDisplay) emailDisplay.textContent = 'Error loading profile';
         if (phoneDisplay) phoneDisplay.textContent = 'Error loading profile';
+        if (presAddressDisplay) presAddressDisplay.textContent = 'Error loading profile';
         if (permAddressDisplay) permAddressDisplay.textContent = 'Error loading profile';
         if (genderDisplay) genderDisplay.textContent = 'Error loading profile';
         if (professionDisplay) professionDisplay.textContent = 'Error loading profile';
@@ -241,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadBookings();
   loadReviews();
   fetchReviewedAndLoadHistory();
+  loadSummaryReport();
 
   // Initialize datepicker default value and load buses
   if (adminBusDateFilter) {

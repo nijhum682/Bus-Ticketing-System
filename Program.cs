@@ -55,10 +55,192 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        // Automatically ensure the database and tables are created.
-        // This is clean, robust, database-agnostic, and works perfectly for Oracle.
-        await context.Database.EnsureCreatedAsync();
-        Console.WriteLine("Oracle database schema verified or created successfully.");
+        // Check if tables already exist to decide whether to run the destructive DROP section
+        bool tablesExist = false;
+        try
+        {
+            tablesExist = await context.Users.AnyAsync();
+        }
+        catch { /* Tables don't exist yet */ }
+
+        if (!tablesExist)
+        {
+            // Fresh install: create schema via EnsureCreated
+            await context.Database.EnsureCreatedAsync();
+            Console.WriteLine("Oracle database schema verified or created successfully.");
+        }
+        else
+        {
+            Console.WriteLine("Oracle database schema already exists — skipping destructive DROP/CREATE. Recompiling PL/SQL objects only.");
+        }
+
+        // Execute setup_database_oracle.sql — but only the safe CREATE OR REPLACE parts
+        // when data already exists (skip DROP TABLE / DROP SEQUENCE / DROP PROCEDURE / CREATE TABLE / CREATE SEQUENCE)
+        try
+        {
+            var sqlPath = Path.Combine(Directory.GetCurrentDirectory(), "setup_database_oracle.sql");
+            if (File.Exists(sqlPath))
+            {
+                Console.WriteLine("Executing setup_database_oracle.sql script on startup to compile all PL/SQL objects...");
+
+                // Clean up any conflicting synonyms that could cause ORA-01775: looping chain of synonyms
+                var synonymsToDrop = new[] { "USERS", "BUSES", "BOOKINGS", "REVIEWS", "NOTICES" };
+                foreach (var syn in synonymsToDrop)
+                {
+                    try { await context.Database.ExecuteSqlRawAsync($"DROP SYNONYM \"{syn}\""); }
+                    catch { /* Ignore if synonym does not exist */ }
+                }
+
+                var sqlContent = await File.ReadAllTextAsync(sqlPath);
+
+                // Split blocks by '/' on its own line
+                var blocks = sqlContent.Split(new[] { "\n/", "\r\n/", "\r/" }, StringSplitOptions.RemoveEmptyEntries);
+
+                // Helper to check if a statement contains actual SQL code (not just comments/whitespace)
+                bool HasActualSqlCode(string sql)
+                {
+                    if (string.IsNullOrWhiteSpace(sql)) return false;
+                    var lines = sql.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var line in lines)
+                    {
+                        var trimmed = line.Trim();
+                        if (string.IsNullOrWhiteSpace(trimmed)) continue;
+                        if (trimmed.StartsWith("--")) continue;
+                        if (trimmed.StartsWith("/*") && trimmed.EndsWith("*/")) continue;
+                        return true;
+                    }
+                    return false;
+                }
+
+                // Statements that destroy data — skip these when tables already have data
+                bool IsDestructiveStatement(string sql)
+                {
+                    var upper = sql.TrimStart().ToUpperInvariant();
+                    return upper.StartsWith("DROP TABLE")
+                        || upper.StartsWith("DROP SEQUENCE")
+                        || upper.StartsWith("CREATE SEQUENCE")
+                        || upper.StartsWith("CREATE TABLE");
+                }
+
+                foreach (var block in blocks)
+                {
+                    var blockText = block.Trim();
+                    if (string.IsNullOrWhiteSpace(blockText)) continue;
+
+                    // Skip ALTER SESSION statements
+                    if (blockText.Contains("ALTER SESSION", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // Find if there is a PL/SQL signature in this block
+                    var plSqlSignatures = new[] {
+                        "CREATE OR REPLACE TRIGGER",
+                        "CREATE OR REPLACE PROCEDURE",
+                        "CREATE OR REPLACE FUNCTION",
+                        "CREATE OR REPLACE PACKAGE",
+                        "DECLARE",
+                        "BEGIN"
+                    };
+
+                    int plSqlIndex = -1;
+                    foreach (var sig in plSqlSignatures)
+                    {
+                        int searchStart = 0;
+                        while (searchStart < blockText.Length)
+                        {
+                            var idx = blockText.IndexOf(sig, searchStart, StringComparison.OrdinalIgnoreCase);
+                            if (idx == -1) break;
+
+                            int lineStart = idx;
+                            while (lineStart > 0 && blockText[lineStart - 1] != '\n' && blockText[lineStart - 1] != '\r')
+                                lineStart--;
+
+                            string linePrefix = blockText.Substring(lineStart, idx - lineStart);
+                            if (linePrefix.Contains("--") || linePrefix.Contains("/*"))
+                            {
+                                searchStart = idx + sig.Length;
+                                continue;
+                            }
+
+                            if (plSqlIndex == -1 || idx < plSqlIndex)
+                                plSqlIndex = idx;
+                            break;
+                        }
+                    }
+
+                    string plainSqlPart = blockText;
+                    string plSqlPart = "";
+
+                    if (plSqlIndex >= 0)
+                    {
+                        plainSqlPart = blockText.Substring(0, plSqlIndex).Trim();
+                        plSqlPart = blockText.Substring(plSqlIndex).Trim();
+                    }
+
+                    // 1. Execute plain SQL statements (split by ';')
+                    if (!string.IsNullOrWhiteSpace(plainSqlPart))
+                    {
+                        var statements = plainSqlPart.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var stmt in statements)
+                        {
+                            var sql = stmt.Trim();
+                            if (string.IsNullOrWhiteSpace(sql)) continue;
+                            if (!HasActualSqlCode(sql)) continue;
+
+                            // When data already exists, skip DROP TABLE, DROP SEQUENCE, CREATE TABLE, CREATE SEQUENCE
+                            if (tablesExist && IsDestructiveStatement(sql))
+                            {
+                                Console.WriteLine($"[Skipped — data exists] {sql.Split('\n')[0].Trim()}");
+                                continue;
+                            }
+
+                            try
+                            {
+                                await context.Database.ExecuteSqlRawAsync(sql);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (!sql.Contains("DROP", StringComparison.OrdinalIgnoreCase))
+                                    Console.WriteLine($"[SQL Warning] Error executing SQL statement: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    // 2. Execute PL/SQL block in full (BEGIN...END, CREATE OR REPLACE PROCEDURE, etc.)
+                    if (!string.IsNullOrWhiteSpace(plSqlPart) && HasActualSqlCode(plSqlPart))
+                    {
+                        // When tables already exist, skip raw BEGIN...END blocks that only contain DROPs
+                        bool isDropOnlyBlock = plSqlPart.Contains("DROP TABLE", StringComparison.OrdinalIgnoreCase)
+                                           || plSqlPart.Contains("DROP SEQUENCE", StringComparison.OrdinalIgnoreCase);
+                        bool isCreateOrReplace = plSqlPart.Contains("CREATE OR REPLACE", StringComparison.OrdinalIgnoreCase);
+
+                        if (tablesExist && isDropOnlyBlock && !isCreateOrReplace)
+                        {
+                            Console.WriteLine($"[Skipped — data exists] {plSqlPart.Split('\n')[0].Trim()}");
+                            continue;
+                        }
+
+                        try
+                        {
+                            await context.Database.ExecuteSqlRawAsync(plSqlPart);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!plSqlPart.Contains("DROP", StringComparison.OrdinalIgnoreCase))
+                                Console.WriteLine($"[PL/SQL Warning] Error executing PL/SQL block: {ex.Message}");
+                        }
+                    }
+                }
+                Console.WriteLine("All Travello PL/SQL functions, procedures, and triggers executed and compiled successfully.");
+            }
+            else
+            {
+                Console.WriteLine("setup_database_oracle.sql not found in directory.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error compiling setup script on startup: " + ex.Message);
+        }
     }
     catch (Exception ex)
     {

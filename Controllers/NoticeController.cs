@@ -2,6 +2,8 @@ using BusTicketingBackend.Data;
 using BusTicketingBackend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
 
 namespace BusTicketingBackend.Controllers
 {
@@ -17,19 +19,28 @@ namespace BusTicketingBackend.Controllers
         }
 
         // GET: api/notice
+        // Calls procedure: GET_NOTICES (cursor-based)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Notice>>> GetNotices()
         {
+            var cursorParam = new OracleParameter("p_cursor", OracleDbType.RefCursor, ParameterDirection.Output);
             return await _context.Notices
-                .OrderBy(n => n.NoticeNumber)
+                .FromSqlRaw("BEGIN GET_NOTICES(:p_cursor); END;", cursorParam)
                 .ToListAsync();
         }
 
         // GET: api/notice/5
+        // Calls procedure: GET_NOTICE_BY_ID (cursor-based)
         [HttpGet("{id}")]
         public async Task<ActionResult<Notice>> GetNotice(int id)
         {
-            var notice = await _context.Notices.FindAsync(id);
+            var idParam     = new OracleParameter("p_id",     OracleDbType.Decimal,   id, ParameterDirection.Input);
+            var cursorParam = new OracleParameter("p_cursor", OracleDbType.RefCursor, ParameterDirection.Output);
+
+            var notice = (await _context.Notices
+                .FromSqlRaw("BEGIN GET_NOTICE_BY_ID(:p_id, :p_cursor); END;", idParam, cursorParam)
+                .ToListAsync())
+                .FirstOrDefault();
 
             if (notice == null)
             {
@@ -40,6 +51,7 @@ namespace BusTicketingBackend.Controllers
         }
 
         // POST: api/notice
+        // Calls procedure: ADD_NOTICE
         [HttpPost]
         public async Task<ActionResult<Notice>> PostNotice([FromBody] Notice notice)
         {
@@ -48,13 +60,30 @@ namespace BusTicketingBackend.Controllers
                 return BadRequest(ModelState);
             }
 
-            _context.Notices.Add(notice);
-            await _context.SaveChangesAsync();
+            await _context.Database.ExecuteSqlRawAsync(
+                "BEGIN ADD_NOTICE(:p_notice_number, :p_title, :p_content); END;",
+                new OracleParameter("p_notice_number", OracleDbType.Varchar2, notice.NoticeNumber, ParameterDirection.Input),
+                new OracleParameter("p_title",         OracleDbType.Varchar2, notice.Title,        ParameterDirection.Input),
+                new OracleParameter("p_content",       OracleDbType.Varchar2, notice.Content,      ParameterDirection.Input)
+            );
 
-            return CreatedAtAction(nameof(GetNotice), new { id = notice.Id }, notice);
+            var cursorParam = new OracleParameter("p_cursor", OracleDbType.RefCursor, ParameterDirection.Output);
+            var notices = await _context.Notices
+                .FromSqlRaw("BEGIN GET_NOTICES(:p_cursor); END;", cursorParam)
+                .ToListAsync();
+
+            var createdNotice = notices.FirstOrDefault(n => n.NoticeNumber == notice.NoticeNumber);
+
+            if (createdNotice == null)
+            {
+                return BadRequest(new { message = "Failed to retrieve created notice." });
+            }
+
+            return CreatedAtAction(nameof(GetNotice), new { id = createdNotice.Id }, createdNotice);
         }
 
         // PUT: api/notice/5
+        // Calls procedure: UPDATE_NOTICE
         [HttpPut("{id}")]
         public async Task<IActionResult> PutNotice(int id, [FromBody] Notice notice)
         {
@@ -68,11 +97,15 @@ namespace BusTicketingBackend.Controllers
                 return BadRequest(ModelState);
             }
 
-            _context.Entry(notice).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _context.Database.ExecuteSqlRawAsync(
+                    "BEGIN UPDATE_NOTICE(:p_id, :p_notice_number, :p_title, :p_content); END;",
+                    new OracleParameter("p_id",            OracleDbType.Decimal,   id,                   ParameterDirection.Input),
+                    new OracleParameter("p_notice_number", OracleDbType.Varchar2,  notice.NoticeNumber,  ParameterDirection.Input),
+                    new OracleParameter("p_title",         OracleDbType.Varchar2,  notice.Title,         ParameterDirection.Input),
+                    new OracleParameter("p_content",       OracleDbType.Varchar2,  notice.Content,       ParameterDirection.Input)
+                );
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -90,24 +123,28 @@ namespace BusTicketingBackend.Controllers
         }
 
         // DELETE: api/notice/5
+        // Calls procedure: DELETE_NOTICE
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNotice(int id)
         {
-            var notice = await _context.Notices.FindAsync(id);
-            if (notice == null)
-            {
-                return NotFound(new { message = "Notice not found." });
-            }
-
-            _context.Notices.Remove(notice);
-            await _context.SaveChangesAsync();
+            await _context.Database.ExecuteSqlRawAsync(
+                "BEGIN DELETE_NOTICE(:p_id); END;",
+                new OracleParameter("p_id", OracleDbType.Decimal, id, ParameterDirection.Input)
+            );
 
             return Ok(new { message = "Notice deleted successfully!" });
         }
 
         private async Task<bool> NoticeExists(int id)
         {
-            return await _context.Notices.AnyAsync(e => e.Id == id);
+            var idParam     = new OracleParameter("p_id",     OracleDbType.Decimal,   id, ParameterDirection.Input);
+            var cursorParam = new OracleParameter("p_cursor", OracleDbType.RefCursor, ParameterDirection.Output);
+
+            var list = await _context.Notices
+                .FromSqlRaw("BEGIN GET_NOTICE_BY_ID(:p_id, :p_cursor); END;", idParam, cursorParam)
+                .ToListAsync();
+
+            return list.Any();
         }
     }
 }

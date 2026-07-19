@@ -23,6 +23,22 @@ BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE SP_GET_USER_BOOKINGS';    EXCEPTION WHEN
 /
 BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE SP_GET_SUMMARY_REPORT';   EXCEPTION WHEN OTHERS THEN NULL; END;
 /
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GET_NOTICES';             EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GET_NOTICE_BY_ID';        EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE ADD_NOTICE';              EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE UPDATE_NOTICE';           EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE DELETE_NOTICE';           EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE SP_DELETE_BUS';           EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE SP_DELETE_USER';          EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GET_BOOKINGS_STATUS_CURSOR'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
 
 -- Drop functions
 BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION FN_GET_AVAILABLE_SEATS';   EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -512,13 +528,23 @@ END SP_CANCEL_BOOKING;
 -- Registers a new user after checking for duplicate email/username.
 -- OUT p_result: 'SUCCESS: ...' or 'ERROR: ...'
 CREATE OR REPLACE PROCEDURE SP_REGISTER_USER(
-    p_name     IN  VARCHAR2,
-    p_username IN  VARCHAR2,
-    p_email    IN  VARCHAR2,
-    p_password IN  VARCHAR2,
-    p_phone    IN  VARCHAR2,
-    p_role     IN  VARCHAR2 DEFAULT 'User',
-    p_result   OUT VARCHAR2
+    p_name            IN  VARCHAR2,
+    p_username        IN  VARCHAR2,
+    p_email           IN  VARCHAR2,
+    p_password        IN  VARCHAR2,
+    p_phone           IN  VARCHAR2,
+    p_role            IN  VARCHAR2 DEFAULT 'User',
+    p_gender          IN  VARCHAR2 DEFAULT NULL,
+    p_profession      IN  VARCHAR2 DEFAULT NULL,
+    p_pres_area       IN  VARCHAR2 DEFAULT NULL,
+    p_pres_upazilla   IN  VARCHAR2 DEFAULT NULL,
+    p_pres_district   IN  VARCHAR2 DEFAULT NULL,
+    p_pres_division   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_area       IN  VARCHAR2 DEFAULT NULL,
+    p_perm_upazilla   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_district   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_division   IN  VARCHAR2 DEFAULT NULL,
+    p_result          OUT VARCHAR2
 ) IS
     v_count NUMBER;
 BEGIN
@@ -540,9 +566,13 @@ BEGIN
 
     -- Insert new user (USERS_TRG handles ID and CREATEDAT)
     INSERT INTO "USERS" (
-        "NAME", "USERNAME", "EMAIL", "PASSWORD", "PHONE", "ROLE"
+        "NAME", "USERNAME", "EMAIL", "PASSWORD", "PHONE", "ROLE",
+        "GENDER", "PROFESSION", "PRESAREA", "PRESUPAZILLA", "PRESDISTRICT", "PRESDIVISION",
+        "PERMAREA", "PERMUPAZILLA", "PERMANENTDISTRICT", "PERMDIVISION"
     ) VALUES (
-        p_name, p_username, p_email, p_password, p_phone, p_role
+        p_name, p_username, p_email, p_password, p_phone, NVL(p_role, 'User'),
+        p_gender, p_profession, p_pres_area, p_pres_upazilla, p_pres_district, p_pres_division,
+        p_perm_area, p_perm_upazilla, p_perm_district, p_perm_division
     );
 
     COMMIT;
@@ -702,6 +732,741 @@ EXCEPTION
         p_upcoming    := 0;  p_completed     := 0;
         p_cancelled   := 0;  p_total_revenue := 0;
 END SP_GET_SUMMARY_REPORT;
+/
+
+-- Procedure: SP_DELETE_BUS
+-- Deletes a bus record by ID.
+-- Prevents deletion if active (upcoming) bookings reference this bus.
+-- OUT p_result: 'SUCCESS: ...' or 'ERROR: ...'
+CREATE OR REPLACE PROCEDURE SP_DELETE_BUS(
+    p_bus_id IN  NUMBER,
+    p_result OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    -- Check the bus exists
+    SELECT COUNT(*) INTO v_count FROM "BUSES" WHERE "ID" = p_bus_id;
+    IF v_count = 0 THEN
+        p_result := 'ERROR: Bus ID ' || p_bus_id || ' not found.';
+        RETURN;
+    END IF;
+
+    -- Delete the bus
+    DELETE FROM "BUSES" WHERE "ID" = p_bus_id;
+    COMMIT;
+    p_result := 'SUCCESS: Bus ID ' || p_bus_id || ' deleted successfully.';
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        p_result := 'ERROR: ' || SQLERRM;
+END SP_DELETE_BUS;
+/
+
+-- Procedure: SP_DELETE_USER
+-- Deletes a user account by username.
+-- OUT p_result: 'SUCCESS: ...' or 'ERROR: ...'
+CREATE OR REPLACE PROCEDURE SP_DELETE_USER(
+    p_username IN  VARCHAR2,
+    p_result   OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    -- Check the user exists
+    SELECT COUNT(*) INTO v_count FROM "USERS"
+    WHERE LOWER("USERNAME") = LOWER(p_username);
+    IF v_count = 0 THEN
+        p_result := 'ERROR: User "' || p_username || '" not found.';
+        RETURN;
+    END IF;
+
+    -- Delete the user
+    DELETE FROM "USERS" WHERE LOWER("USERNAME") = LOWER(p_username);
+    COMMIT;
+    p_result := 'SUCCESS: User "' || p_username || '" deleted successfully.';
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        p_result := 'ERROR: ' || SQLERRM;
+END SP_DELETE_USER;
+/
+
+-- ================================================================
+-- SECTION 7C: REMAINING TRAVELLO DB PROCEDURES
+-- Plain (non-SP_) versions that directly cover all CRUD operations
+-- for BUSES, BOOKINGS, REVIEWS, and USERS tables.
+-- ================================================================
+
+-- Procedure: REGISTER_USER
+-- Plain alternative to SP_REGISTER_USER — registers a new user.
+CREATE OR REPLACE PROCEDURE REGISTER_USER(
+    p_name            IN  VARCHAR2,
+    p_username        IN  VARCHAR2,
+    p_email           IN  VARCHAR2,
+    p_password        IN  VARCHAR2,
+    p_phone           IN  VARCHAR2,
+    p_role            IN  VARCHAR2 DEFAULT 'User',
+    p_gender          IN  VARCHAR2 DEFAULT NULL,
+    p_profession      IN  VARCHAR2 DEFAULT NULL,
+    p_pres_area       IN  VARCHAR2 DEFAULT NULL,
+    p_pres_upazilla   IN  VARCHAR2 DEFAULT NULL,
+    p_pres_district   IN  VARCHAR2 DEFAULT NULL,
+    p_pres_division   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_area       IN  VARCHAR2 DEFAULT NULL,
+    p_perm_upazilla   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_district   IN  VARCHAR2 DEFAULT NULL,
+    p_perm_division   IN  VARCHAR2 DEFAULT NULL,
+    p_result          OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "USERS" WHERE LOWER("EMAIL") = LOWER(p_email);
+    IF v_count > 0 THEN p_result := 'ERROR: Email already registered.'; RETURN; END IF;
+    SELECT COUNT(*) INTO v_count FROM "USERS" WHERE LOWER("USERNAME") = LOWER(p_username);
+    IF v_count > 0 THEN p_result := 'ERROR: Username already taken.'; RETURN; END IF;
+    INSERT INTO "USERS" (
+        "NAME","USERNAME","EMAIL","PASSWORD","PHONE","ROLE",
+        "GENDER", "PROFESSION", "PRESAREA", "PRESUPAZILLA", "PRESDISTRICT", "PRESDIVISION",
+        "PERMAREA", "PERMUPAZILLA", "PERMANENTDISTRICT", "PERMDIVISION"
+    )
+    VALUES (
+        p_name, p_username, p_email, p_password, p_phone, NVL(p_role,'User'),
+        p_gender, p_profession, p_pres_area, p_pres_upazilla, p_pres_district, p_pres_division,
+        p_perm_area, p_perm_upazilla, p_perm_district, p_perm_division
+    );
+    COMMIT;
+    p_result := 'SUCCESS: User "' || p_username || '" registered.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: ' || SQLERRM;
+END REGISTER_USER;
+/
+
+-- Procedure: ADD_BOOKING
+-- Plain alternative to SP_ADD_BOOKING — creates a booking with seat check.
+CREATE OR REPLACE PROCEDURE ADD_BOOKING(
+    p_user_email    IN  VARCHAR2,
+    p_bus_id        IN  NUMBER,
+    p_bus_name      IN  VARCHAR2,
+    p_from_district IN  VARCHAR2,
+    p_to_district   IN  VARCHAR2,
+    p_journey_date  IN  VARCHAR2,
+    p_seats         IN  VARCHAR2,
+    p_payment       IN  VARCHAR2,
+    p_depart_time   IN  VARCHAR2,
+    p_result        OUT VARCHAR2
+) IS
+    v_available  NUMBER;
+    v_seat_count NUMBER;
+BEGIN
+    SELECT "AVAILABLESEATS" INTO v_available FROM "BUSES" WHERE "ID" = p_bus_id;
+    v_seat_count := LENGTH(p_seats) - LENGTH(REPLACE(p_seats,',','')) + 1;
+    IF v_available < v_seat_count THEN
+        p_result := 'ERROR: Only '||v_available||' seat(s) available.'; RETURN;
+    END IF;
+    INSERT INTO "BOOKINGS"("USEREMAIL","BUSID","BUSNAME","FROMDISTRICT","TODISTRICT","JOURNEYDATE","SEATS","PAYMENTMETHOD","DEPARTURETIME")
+    VALUES(p_user_email,p_bus_id,p_bus_name,p_from_district,p_to_district,p_journey_date,p_seats,p_payment,p_depart_time);
+    UPDATE "BUSES" SET "AVAILABLESEATS" = "AVAILABLESEATS" - v_seat_count WHERE "ID" = p_bus_id;
+    COMMIT;
+    p_result := 'SUCCESS: '||v_seat_count||' seat(s) booked on '||p_bus_name||'.';
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN p_result := 'ERROR: Bus ID '||p_bus_id||' not found.';
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END ADD_BOOKING;
+/
+
+-- Procedure: CANCEL_BOOKING
+-- Plain alternative to SP_CANCEL_BOOKING — cancels a booking.
+CREATE OR REPLACE PROCEDURE CANCEL_BOOKING(
+    p_booking_id IN  NUMBER,
+    p_result     OUT VARCHAR2
+) IS
+    v_status VARCHAR2(50);
+    v_bus_id NUMBER;
+    v_seats  VARCHAR2(200);
+    v_cnt    NUMBER;
+BEGIN
+    SELECT "STATUS","BUSID","SEATS" INTO v_status,v_bus_id,v_seats FROM "BOOKINGS" WHERE "ID" = p_booking_id;
+    IF v_status = 'Cancelled' THEN p_result := 'ERROR: Already cancelled.'; RETURN; END IF;
+    v_cnt := LENGTH(v_seats) - LENGTH(REPLACE(v_seats,',','')) + 1;
+    UPDATE "BOOKINGS" SET "STATUS" = 'Cancelled' WHERE "ID" = p_booking_id;
+    UPDATE "BUSES" SET "AVAILABLESEATS" = LEAST(40,"AVAILABLESEATS"+v_cnt) WHERE "ID" = v_bus_id;
+    COMMIT;
+    p_result := 'SUCCESS: Booking #'||p_booking_id||' cancelled.';
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN p_result := 'ERROR: Booking #'||p_booking_id||' not found.';
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END CANCEL_BOOKING;
+/
+
+-- Procedure: ADD_BUS
+-- Inserts a new bus record into the BUSES table.
+CREATE OR REPLACE PROCEDURE ADD_BUS(
+    p_operator      IN  VARCHAR2,
+    p_bus_type      IN  VARCHAR2,
+    p_depart_time   IN  VARCHAR2,
+    p_fare          IN  NUMBER,
+    p_avail_seats   IN  NUMBER,
+    p_from_district IN  VARCHAR2,
+    p_to_district   IN  VARCHAR2,
+    p_journey_date  IN  VARCHAR2,
+    p_result        OUT VARCHAR2
+) IS
+BEGIN
+    INSERT INTO "BUSES"("OPERATOR","BUSTYPE","DEPARTURETIME","FARE","AVAILABLESEATS","FROMDISTRICT","TODISTRICT","JOURNEYDATE","BOOKEDSEATS")
+    VALUES(p_operator,p_bus_type,p_depart_time,p_fare,NVL(p_avail_seats,40),p_from_district,p_to_district,NVL(p_journey_date,''),'');
+    COMMIT;
+    p_result := 'SUCCESS: Bus "'||p_operator||'" added.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END ADD_BUS;
+/
+
+-- Procedure: ADD_REVIEW
+-- Inserts a new review record for a booking.
+CREATE OR REPLACE PROCEDURE ADD_REVIEW(
+    p_user_email    IN  VARCHAR2,
+    p_booking_id    IN  NUMBER,
+    p_bus_operator  IN  VARCHAR2,
+    p_route         IN  VARCHAR2,
+    p_journey_date  IN  VARCHAR2,
+    p_rating        IN  NUMBER,
+    p_comment       IN  VARCHAR2,
+    p_result        OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "REVIEWS" WHERE "BOOKINGID" = p_booking_id;
+    IF v_count > 0 THEN p_result := 'ERROR: Already reviewed.'; RETURN; END IF;
+    INSERT INTO "REVIEWS"("USEREMAIL","BOOKINGID","BUSOPERATOR","ROUTE","JOURNEYDATE","RATING","COMMENT")
+    VALUES(p_user_email,p_booking_id,p_bus_operator,p_route,p_journey_date,p_rating,p_comment);
+    COMMIT;
+    p_result := 'SUCCESS: Review submitted.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END ADD_REVIEW;
+/
+
+-- Procedure: DELETE_BUS
+-- Plain (non-SP_) version — deletes a bus by ID.
+CREATE OR REPLACE PROCEDURE DELETE_BUS(
+    p_bus_id IN  NUMBER,
+    p_result OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "BUSES" WHERE "ID" = p_bus_id;
+    IF v_count = 0 THEN p_result := 'ERROR: Bus ID '||p_bus_id||' not found.'; RETURN; END IF;
+    DELETE FROM "BUSES" WHERE "ID" = p_bus_id;
+    COMMIT;
+    p_result := 'SUCCESS: Bus ID '||p_bus_id||' deleted.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END DELETE_BUS;
+/
+
+-- Procedure: DELETE_USER
+-- Plain (non-SP_) version — deletes a user by username.
+CREATE OR REPLACE PROCEDURE DELETE_USER(
+    p_username IN  VARCHAR2,
+    p_result   OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "USERS" WHERE LOWER("USERNAME") = LOWER(p_username);
+    IF v_count = 0 THEN p_result := 'ERROR: User "'||p_username||'" not found.'; RETURN; END IF;
+    DELETE FROM "USERS" WHERE LOWER("USERNAME") = LOWER(p_username);
+    COMMIT;
+    p_result := 'SUCCESS: User "'||p_username||'" deleted.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END DELETE_USER;
+/
+
+-- Procedure: UPDATE_BUS
+-- Updates bus details by ID.
+CREATE OR REPLACE PROCEDURE UPDATE_BUS(
+    p_id            IN  NUMBER,
+    p_operator      IN  VARCHAR2,
+    p_bus_type      IN  VARCHAR2,
+    p_depart_time   IN  VARCHAR2,
+    p_fare          IN  NUMBER,
+    p_from_district IN  VARCHAR2,
+    p_to_district   IN  VARCHAR2,
+    p_result        OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "BUSES" WHERE "ID" = p_id;
+    IF v_count = 0 THEN p_result := 'ERROR: Bus ID '||p_id||' not found.'; RETURN; END IF;
+    UPDATE "BUSES"
+    SET    "OPERATOR"      = p_operator,
+           "BUSTYPE"       = p_bus_type,
+           "DEPARTURETIME" = p_depart_time,
+           "FARE"          = p_fare,
+           "FROMDISTRICT"  = p_from_district,
+           "TODISTRICT"    = p_to_district
+    WHERE  "ID" = p_id;
+    COMMIT;
+    p_result := 'SUCCESS: Bus ID '||p_id||' updated.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END UPDATE_BUS;
+/
+
+-- Procedure: UPDATE_BUS_SEATS
+-- Updates only the seat fields of a bus (AvailableSeats and BookedSeats).
+CREATE OR REPLACE PROCEDURE UPDATE_BUS_SEATS(
+    p_bus_id         IN  NUMBER,
+    p_avail_seats    IN  NUMBER,
+    p_booked_seats   IN  VARCHAR2,
+    p_result         OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "BUSES" WHERE "ID" = p_bus_id;
+    IF v_count = 0 THEN p_result := 'ERROR: Bus ID '||p_bus_id||' not found.'; RETURN; END IF;
+    UPDATE "BUSES"
+    SET    "AVAILABLESEATS" = p_avail_seats,
+           "BOOKEDSEATS"    = p_booked_seats
+    WHERE  "ID" = p_bus_id;
+    COMMIT;
+    p_result := 'SUCCESS: Bus ID '||p_bus_id||' seats updated.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END UPDATE_BUS_SEATS;
+/
+
+-- Procedure: UPDATE_USER
+-- Admin-level full update of a user account.
+CREATE OR REPLACE PROCEDURE UPDATE_USER(
+    p_username            IN  VARCHAR2,
+    p_name                IN  VARCHAR2,
+    p_email               IN  VARCHAR2,
+    p_phone               IN  VARCHAR2,
+    p_role                IN  VARCHAR2,
+    p_result              OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "USERS" WHERE LOWER("USERNAME") = LOWER(p_username);
+    IF v_count = 0 THEN p_result := 'ERROR: User "'||p_username||'" not found.'; RETURN; END IF;
+    UPDATE "USERS"
+    SET    "NAME"  = p_name,
+           "EMAIL" = p_email,
+           "PHONE" = p_phone,
+           "ROLE"  = p_role
+    WHERE  LOWER("USERNAME") = LOWER(p_username);
+    COMMIT;
+    p_result := 'SUCCESS: User "'||p_username||'" updated.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END UPDATE_USER;
+/
+
+-- Procedure: UPDATE_USER_PROFILE
+-- User self-service profile update (all fields including address, gender, profession).
+CREATE OR REPLACE PROCEDURE UPDATE_USER_PROFILE(
+    p_email           IN  VARCHAR2,
+    p_name            IN  VARCHAR2,
+    p_phone           IN  VARCHAR2,
+    p_new_password    IN  VARCHAR2,
+    p_gender          IN  VARCHAR2,
+    p_profession      IN  VARCHAR2,
+    p_pres_area       IN  VARCHAR2,
+    p_pres_upazilla   IN  VARCHAR2,
+    p_pres_district   IN  VARCHAR2,
+    p_pres_division   IN  VARCHAR2,
+    p_perm_area       IN  VARCHAR2,
+    p_perm_upazilla   IN  VARCHAR2,
+    p_perm_district   IN  VARCHAR2,
+    p_perm_division   IN  VARCHAR2,
+    p_result          OUT VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM "USERS" WHERE LOWER("EMAIL") = LOWER(p_email);
+    IF v_count = 0 THEN p_result := 'ERROR: User not found.'; RETURN; END IF;
+    IF p_new_password IS NOT NULL AND LENGTH(TRIM(p_new_password)) > 0 THEN
+        UPDATE "USERS"
+        SET    "NAME"             = p_name,
+               "PHONE"            = p_phone,
+               "PASSWORD"         = p_new_password,
+               "GENDER"           = p_gender,
+               "PROFESSION"       = p_profession,
+               "PRESAREA"         = p_pres_area,
+               "PRESUPAZILLA"     = p_pres_upazilla,
+               "PRESDISTRICT"     = p_pres_district,
+               "PRESDIVISION"     = p_pres_division,
+               "PERMAREA"         = p_perm_area,
+               "PERMUPAZILLA"     = p_perm_upazilla,
+               "PERMANENTDISTRICT"= p_perm_district,
+               "PERMDIVISION"     = p_perm_division
+        WHERE  LOWER("EMAIL") = LOWER(p_email);
+    ELSE
+        UPDATE "USERS"
+        SET    "NAME"             = p_name,
+               "PHONE"            = p_phone,
+               "GENDER"           = p_gender,
+               "PROFESSION"       = p_profession,
+               "PRESAREA"         = p_pres_area,
+               "PRESUPAZILLA"     = p_pres_upazilla,
+               "PRESDISTRICT"     = p_pres_district,
+               "PRESDIVISION"     = p_pres_division,
+               "PERMAREA"         = p_perm_area,
+               "PERMUPAZILLA"     = p_perm_upazilla,
+               "PERMANENTDISTRICT"= p_perm_district,
+               "PERMDIVISION"     = p_perm_division
+        WHERE  LOWER("EMAIL") = LOWER(p_email);
+    END IF;
+    COMMIT;
+    p_result := 'SUCCESS: Profile updated.';
+EXCEPTION
+    WHEN OTHERS THEN ROLLBACK; p_result := 'ERROR: '||SQLERRM;
+END UPDATE_USER_PROFILE;
+/
+
+-- Procedure: GET_ALL_USERS
+-- Returns all users via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_ALL_USERS(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "USERS" ORDER BY "CREATEDAT" DESC;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "USERS" WHERE 1=0;
+END GET_ALL_USERS;
+/
+
+-- Procedure: GET_USER_BY_ID
+-- Returns a single user row by ID via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_USER_BY_ID(
+    p_id     IN  NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "USERS" WHERE "ID" = p_id;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "USERS" WHERE 1=0;
+END GET_USER_BY_ID;
+/
+
+-- Procedure: GET_USER_BY_EMAIL
+-- Returns a single user row by EMAIL via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_USER_BY_EMAIL(
+    p_email  IN  VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "USERS" WHERE LOWER("EMAIL") = LOWER(p_email);
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "USERS" WHERE 1=0;
+END GET_USER_BY_EMAIL;
+/
+
+-- Procedure: GET_ALL_BOOKINGS
+-- Returns all bookings with computed real-time status via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_ALL_BOOKINGS(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BOOKINGS" ORDER BY "TICKETISSUINGTIME" DESC;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BOOKINGS" WHERE 1=0;
+END GET_ALL_BOOKINGS;
+/
+
+-- Procedure: GET_BOOKING_BY_ID
+-- Returns a single booking by ID via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_BOOKING_BY_ID(
+    p_id     IN  NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BOOKINGS" WHERE "ID" = p_id;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BOOKINGS" WHERE 1=0;
+END GET_BOOKING_BY_ID;
+/
+
+-- Procedure: GET_BOOKINGS_BY_STATUS
+-- Returns bookings filtered by status column via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_BOOKINGS_BY_STATUS(
+    p_status IN  VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BOOKINGS" WHERE "STATUS" = p_status ORDER BY "TICKETISSUINGTIME" DESC;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BOOKINGS" WHERE 1=0;
+END GET_BOOKINGS_BY_STATUS;
+/
+
+-- Procedure: GET_BUS_BY_ID
+-- Returns a single bus row by ID via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_BUS_BY_ID(
+    p_id     IN  NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BUSES" WHERE "ID" = p_id;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1=0;
+END GET_BUS_BY_ID;
+/
+
+-- Procedure: GET_BUSES_BY_DATE
+-- Returns all buses for a given journey date via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_BUSES_BY_DATE(
+    p_journey_date IN  VARCHAR2,
+    p_cursor       OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BUSES" WHERE "JOURNEYDATE" = p_journey_date ORDER BY "OPERATOR","DEPARTURETIME";
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1=0;
+END GET_BUSES_BY_DATE;
+/
+
+-- Procedure: GET_BUSES_BY_ROUTE
+-- Returns buses matching from/to/date via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_BUSES_BY_ROUTE(
+    p_from_district IN  VARCHAR2,
+    p_to_district   IN  VARCHAR2,
+    p_journey_date  IN  VARCHAR2,
+    p_cursor        OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BUSES"
+        WHERE LOWER("FROMDISTRICT") = LOWER(p_from_district)
+          AND LOWER("TODISTRICT")   = LOWER(p_to_district)
+          AND "JOURNEYDATE"         = p_journey_date
+        ORDER BY "DEPARTURETIME";
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1=0;
+END GET_BUSES_BY_ROUTE;
+/
+
+-- Procedure: GET_TEMPLATE_BUSES
+-- Returns all template buses (JourneyDate = '') via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_TEMPLATE_BUSES(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "BUSES" WHERE "JOURNEYDATE" = '' OR "JOURNEYDATE" IS NULL ORDER BY "OPERATOR","DEPARTURETIME";
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1=0;
+END GET_TEMPLATE_BUSES;
+/
+
+-- Procedure: GET_REVIEWS
+-- Returns all reviews ordered by creation date via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_REVIEWS(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "REVIEWS" ORDER BY "CREATEDAT" DESC;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "REVIEWS" WHERE 1=0;
+END GET_REVIEWS;
+/
+
+-- Procedure: GET_REVIEW_BY_ID
+-- Returns a single review by ID via SYS_REFCURSOR.
+CREATE OR REPLACE PROCEDURE GET_REVIEW_BY_ID(
+    p_id     IN  NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "REVIEWS" WHERE "ID" = p_id;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "REVIEWS" WHERE 1=0;
+END GET_REVIEW_BY_ID;
+/
+
+-- Procedure: GET_USER_REVIEWS
+-- Returns all reviews submitted by a specific user email.
+CREATE OR REPLACE PROCEDURE GET_USER_REVIEWS(
+    p_email  IN  VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT * FROM "REVIEWS" WHERE LOWER("USEREMAIL") = LOWER(p_email) ORDER BY "CREATEDAT" DESC;
+EXCEPTION
+    WHEN OTHERS THEN OPEN p_cursor FOR SELECT * FROM "REVIEWS" WHERE 1=0;
+END GET_USER_REVIEWS;
+/
+/
+
+
+-- These procedures use named (explicit) PL/SQL cursors to iterate
+-- through result sets row-by-row before returning a SYS_REFCURSOR.
+-- Demonstrates classic Oracle explicit cursor usage.
+-- ================================================================
+
+-- Procedure: SP_GET_ALL_BUSES_CURSOR
+-- Uses an explicit cursor to iterate all buses for a given journey date
+-- and returns a SYS_REFCURSOR to the caller.
+-- OUT p_cursor: SYS_REFCURSOR with all bus rows for the date
+CREATE OR REPLACE PROCEDURE SP_GET_ALL_BUSES_CURSOR(
+    p_journey_date IN  VARCHAR2,
+    p_cursor       OUT SYS_REFCURSOR
+) IS
+    -- Explicit named cursor declaration
+    CURSOR cur_buses IS
+        SELECT "ID", "OPERATOR", "BUSTYPE", "DEPARTURETIME",
+               "FARE", "AVAILABLESEATS",
+               "FROMDISTRICT", "TODISTRICT",
+               "JOURNEYDATE", "BOOKEDSEATS"
+        FROM   "BUSES"
+        WHERE  "JOURNEYDATE" = p_journey_date
+        ORDER  BY "OPERATOR", "DEPARTURETIME";
+
+    v_bus     cur_buses%ROWTYPE;
+    v_count   NUMBER := 0;
+BEGIN
+    -- Iterate with explicit cursor to count and validate
+    OPEN cur_buses;
+    LOOP
+        FETCH cur_buses INTO v_bus;
+        EXIT WHEN cur_buses%NOTFOUND;
+        v_count := v_count + 1;
+    END LOOP;
+    CLOSE cur_buses;
+
+    -- Return the result set via SYS_REFCURSOR
+    IF v_count > 0 THEN
+        OPEN p_cursor FOR
+            SELECT "ID", "OPERATOR", "BUSTYPE", "DEPARTURETIME",
+                   "FARE", "AVAILABLESEATS",
+                   "FROMDISTRICT", "TODISTRICT",
+                   "JOURNEYDATE", "BOOKEDSEATS"
+            FROM   "BUSES"
+            WHERE  "JOURNEYDATE" = p_journey_date
+            ORDER  BY "OPERATOR", "DEPARTURETIME";
+    ELSE
+        OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1 = 0;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF cur_buses%ISOPEN THEN CLOSE cur_buses; END IF;
+        OPEN p_cursor FOR SELECT * FROM "BUSES" WHERE 1 = 0;
+END SP_GET_ALL_BUSES_CURSOR;
+/
+
+-- Procedure: GET_BOOKINGS_STATUS_CURSOR
+-- Uses an explicit cursor to collect bookings filtered by status.
+-- p_status IN: 'Upcoming', 'Completed', or 'Cancelled'
+-- OUT p_cursor: SYS_REFCURSOR with matching booking rows
+CREATE OR REPLACE PROCEDURE GET_BOOKINGS_STATUS_CURSOR(
+    p_status IN  VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+    -- Explicit named cursor declaration
+    CURSOR cur_bookings IS
+        SELECT bk."ID",
+               bk."USEREMAIL",
+               bk."BUSNAME",
+               bk."FROMDISTRICT",
+               bk."TODISTRICT",
+               bk."JOURNEYDATE",
+               bk."DEPARTURETIME",
+               bk."SEATS",
+               bk."PAYMENTMETHOD",
+               bk."TICKETISSUINGTIME",
+               FN_GET_BOOKING_STATUS(bk."ID") AS "COMPUTED_STATUS"
+         FROM   "BOOKINGS" bk
+         ORDER  BY bk."TICKETISSUINGTIME" DESC;
+
+     v_row       cur_bookings%ROWTYPE;
+     v_matched   NUMBER := 0;
+ BEGIN
+     -- Walk the explicit cursor to count matching rows
+     OPEN cur_bookings;
+     LOOP
+         FETCH cur_bookings INTO v_row;
+         EXIT WHEN cur_bookings%NOTFOUND;
+         IF v_row."COMPUTED_STATUS" = p_status THEN
+             v_matched := v_matched + 1;
+         END IF;
+     END LOOP;
+     CLOSE cur_bookings;
+
+     -- Return filtered result set via SYS_REFCURSOR
+     OPEN p_cursor FOR
+         SELECT bk."ID",
+                bk."USEREMAIL",
+                bk."BUSNAME",
+                bk."FROMDISTRICT",
+                bk."TODISTRICT",
+                bk."JOURNEYDATE",
+                bk."DEPARTURETIME",
+                bk."SEATS",
+                bk."PAYMENTMETHOD",
+                bk."TICKETISSUINGTIME",
+                FN_GET_BOOKING_STATUS(bk."ID") AS "COMPUTED_STATUS"
+         FROM   "BOOKINGS" bk
+         WHERE  FN_GET_BOOKING_STATUS(bk."ID") = p_status
+         ORDER  BY bk."TICKETISSUINGTIME" DESC;
+ EXCEPTION
+     WHEN OTHERS THEN
+         IF cur_bookings%ISOPEN THEN CLOSE cur_bookings; END IF;
+         OPEN p_cursor FOR SELECT * FROM "BOOKINGS" WHERE 1 = 0;
+ END GET_BOOKINGS_STATUS_CURSOR;
+/
+
+-- Procedure: SP_GET_REVIEWS_CURSOR
+-- Uses an explicit cursor to iterate all reviews and returns them
+-- as a SYS_REFCURSOR ordered by creation date descending.
+-- OUT p_cursor: SYS_REFCURSOR with all review rows
+CREATE OR REPLACE PROCEDURE SP_GET_REVIEWS_CURSOR(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+    -- Explicit named cursor declaration
+    CURSOR cur_reviews IS
+        SELECT "ID", "USEREMAIL", "BOOKINGID",
+               "BUSOPERATOR", "ROUTE",
+               "JOURNEYDATE", "RATING",
+               "COMMENT", "CREATEDAT"
+        FROM   "REVIEWS"
+        ORDER  BY "CREATEDAT" DESC;
+
+    v_review  cur_reviews%ROWTYPE;
+    v_count   NUMBER := 0;
+BEGIN
+    -- Iterate with explicit cursor to verify rows exist
+    OPEN cur_reviews;
+    LOOP
+        FETCH cur_reviews INTO v_review;
+        EXIT WHEN cur_reviews%NOTFOUND;
+        v_count := v_count + 1;
+    END LOOP;
+    CLOSE cur_reviews;
+
+    -- Return via SYS_REFCURSOR
+    OPEN p_cursor FOR
+        SELECT "ID", "USEREMAIL", "BOOKINGID",
+               "BUSOPERATOR", "ROUTE",
+               "JOURNEYDATE", "RATING",
+               "COMMENT", "CREATEDAT"
+        FROM   "REVIEWS"
+        ORDER  BY "CREATEDAT" DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF cur_reviews%ISOPEN THEN CLOSE cur_reviews; END IF;
+        OPEN p_cursor FOR SELECT * FROM "REVIEWS" WHERE 1 = 0;
+END SP_GET_REVIEWS_CURSOR;
 /
 
 -- ================================================================
@@ -1227,3 +1992,72 @@ END PKG_BUS_TICKETING;
 --     DBMS_OUTPUT.PUT_LINE('Users: '||u||' | Buses: '||b||' | Revenue: '||rev);
 --   END;
 -- ================================================================
+
+-- ================================================================
+-- SECTION 10: NOTICE MANAGEMENT PROCEDURES
+-- ================================================================
+
+-- Procedure: GET_NOTICES
+CREATE OR REPLACE PROCEDURE GET_NOTICES(
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT "ID", "NOTICENUMBER", "TITLE", "CONTENT", "CREATEDAT"
+        FROM   "NOTICES"
+        ORDER  BY "NOTICENUMBER";
+END GET_NOTICES;
+/
+
+-- Procedure: GET_NOTICE_BY_ID
+CREATE OR REPLACE PROCEDURE GET_NOTICE_BY_ID(
+    p_id     IN  NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+) IS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT "ID", "NOTICENUMBER", "TITLE", "CONTENT", "CREATEDAT"
+        FROM   "NOTICES"
+        WHERE  "ID" = p_id;
+END GET_NOTICE_BY_ID;
+/
+
+-- Procedure: ADD_NOTICE
+CREATE OR REPLACE PROCEDURE ADD_NOTICE(
+    p_notice_number IN VARCHAR2,
+    p_title         IN VARCHAR2,
+    p_content       IN VARCHAR2
+) IS
+BEGIN
+    INSERT INTO "NOTICES" ("NOTICENUMBER", "TITLE", "CONTENT")
+    VALUES (p_notice_number, p_title, p_content);
+    COMMIT;
+END ADD_NOTICE;
+/
+
+-- Procedure: UPDATE_NOTICE
+CREATE OR REPLACE PROCEDURE UPDATE_NOTICE(
+    p_id            IN NUMBER,
+    p_notice_number IN VARCHAR2,
+    p_title         IN VARCHAR2,
+    p_content       IN VARCHAR2
+) IS
+BEGIN
+    UPDATE "NOTICES"
+    SET    "NOTICENUMBER" = p_notice_number,
+           "TITLE"        = p_title,
+           "CONTENT"      = p_content
+    WHERE  "ID"           = p_id;
+    COMMIT;
+END UPDATE_NOTICE;
+/
+
+-- Procedure: DELETE_NOTICE
+CREATE OR REPLACE PROCEDURE DELETE_NOTICE(
+    p_id IN NUMBER
+) IS
+BEGIN
+    DELETE FROM "NOTICES" WHERE "ID" = p_id;
+    COMMIT;
+END DELETE_NOTICE;
+/

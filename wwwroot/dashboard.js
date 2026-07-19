@@ -124,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nameDisplay) nameDisplay.textContent = 'Error loading profile';
         if (emailDisplay) emailDisplay.textContent = 'Error loading profile';
         if (phoneDisplay) phoneDisplay.textContent = 'Error loading profile';
+        if (presAddressDisplay) presAddressDisplay.textContent = 'Error loading profile';
         if (permAddressDisplay) permAddressDisplay.textContent = 'Error loading profile';
         if (genderDisplay) genderDisplay.textContent = 'Error loading profile';
         if (professionDisplay) professionDisplay.textContent = 'Error loading profile';
